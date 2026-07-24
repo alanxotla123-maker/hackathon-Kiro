@@ -7,7 +7,7 @@ import DatabaseDesigner from './components/DatabaseDesigner/DatabaseDesigner'
 import './App.css'
 
 export default function App() {
-  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'workspace'>(() => {
+  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'loginSuccess' | 'workspace'>(() => {
     const saved = localStorage.getItem('authSession')
     return saved === 'active' ? 'workspace' : 'login'
   })
@@ -16,7 +16,7 @@ export default function App() {
   const [registerConflict, setRegisterConflict] = useState<boolean>(false)
   const [notification, setNotification] = useState<string | null>(null)
 
-  const handleSetAuthScreen = (screen: 'login' | 'register' | 'forgot' | 'success' | 'workspace') => {
+  const handleSetAuthScreen = (screen: 'login' | 'register' | 'forgot' | 'success' | 'loginSuccess' | 'workspace') => {
     setAuthScreen(screen)
     if (screen === 'workspace') {
       localStorage.setItem('authSession', 'active')
@@ -77,6 +77,16 @@ export default function App() {
         <Success
           setAuthScreen={handleSetAuthScreen}
           showNotification={showNotification}
+          variant="register"
+        />
+      )}
+
+      {authScreen === 'loginSuccess' && (
+        <Success
+          setAuthScreen={handleSetAuthScreen}
+          showNotification={showNotification}
+          variant="login"
+          userName={localStorage.getItem('userFullName') || undefined}
         />
       )}
 

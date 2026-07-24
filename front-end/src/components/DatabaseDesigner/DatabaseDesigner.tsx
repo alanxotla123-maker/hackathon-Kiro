@@ -34,6 +34,7 @@ import {
 import { DashboardHome } from '../Dashboard/DashboardHome'
 import { UserProfileView } from '../Dashboard/UserProfileView'
 import { BandwidthSidebar } from '../Dashboard/BandwidthView'
+import logoImg from '../../logo/logo.jpeg'
 
 type BwTab = 'home' | 'tree' | 'commits'
 
@@ -1044,9 +1045,7 @@ export default function DatabaseDesigner({
           <>
             <div className="master-sidebar-logo-group">
               <div className="master-logo-circle">
-                <svg className="master-logo-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#38bdf8" strokeWidth="2.5">
-                  <path d="M12 12c-2-2.67-4-4-6-4A4 4 0 0 0 2 12a4 4 0 0 0 4 4c2 0 4-1.33 6-4Zm0 0c2-2.67 4-4 6-4a4 4 0 0 1 4 4 4 4 0 0 1-4 4c-2 0-4-1.33-6-4Z" />
-                </svg>
+                <img src={logoImg} alt="DevSync Logo" style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'cover' }} />
               </div>
               <div className="master-logo-text-group">
                 <span className="master-logo-text">DevSync</span>
