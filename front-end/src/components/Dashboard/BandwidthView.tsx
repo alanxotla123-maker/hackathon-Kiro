@@ -874,9 +874,9 @@ function CommitListView({
                       K
                     </div>
                     <span>
-                      <span style={{ color: '#e6edf3', fontWeight: 500 }}>kiro-developer</span> committed {'date' in c ? c.date : 'just now'}
+                      <span style={{ color: '#e6edf3', fontWeight: 500 }}>kiro-developer</span> committed {'date' in c ? (c as any).date : 'just now'}
                     </span>
-                    {'isMerge' in c && c.isMerge && (
+                    {'isMerge' in c && (c as any).isMerge && (
                       <span style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa', padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600 }}>MERGE</span>
                     )}
                   </div>

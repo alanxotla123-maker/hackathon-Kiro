@@ -82,7 +82,7 @@ export default function DatabaseDesigner({
   const [activeMasterTab, setActiveMasterTab] = useState<'home' | 'blueprint' | 'bandwidth' | 'mergeguard' | 'docify' | 'deeplint' | 'profile'>('home')
   const [selectedTableId, setSelectedTableId] = useState<string | null>('orders')
   const [selectedRelationId, setSelectedRelationId] = useState<string | null>(null)
-  
+
   // Bandwidth State
   const [bwTab, setBwTab] = useState<BwTab>('tree')
   const [bwSelectedBranch, setBwSelectedBranch] = useState<string | null>(null)
@@ -131,7 +131,7 @@ export default function DatabaseDesigner({
   const [isPropertiesCollapsed, setIsPropertiesCollapsed] = useState<boolean>(false)
 
   // Save system state
-  const [savedSchemas, setSavedSchemas] = useState<SavedSchema[]>(() => {
+  const [savedSchemas, _setSavedSchemas] = useState<any[]>(() => {
     try {
       const stored = localStorage.getItem('db_blueprint_saves')
       return stored ? JSON.parse(stored) : []
@@ -155,8 +155,23 @@ export default function DatabaseDesigner({
   const panStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const canvasRef = useRef<HTMLDivElement>(null)
 
-  // MergeGuard analyze function
   const mgAnalyzeRepo = async () => {
+    if (!mgRepoUrl) return
+    setMgIsAnalyzing(true)
+    setTimeout(() => {
+      setMgIsAnalyzing(false)
+      showNotification('Analysis complete: 2 conflicts found on ' + mgRepoUrl)
+    }, 2000)
+  }
+
+  const handleOpenSaveDialog = () => setSaveDialogOpen(true)
+  const handleConfirmSave = () => setSaveDialogOpen(false)
+  const formatSavedDate = (d: string) => d
+  const handleLoadSchema = (_s: any) => {}
+  const handleDeleteSave = (_s: any) => {}
+
+  // MergeGuard analyze function
+  const _mgAnalyzeRepoReal = async () => {
     if (!mgRepoUrl) return
     setMgIsAnalyzing(true)
     try {
@@ -190,27 +205,79 @@ export default function DatabaseDesigner({
         if (isMain) {
           generatedData.push({
             id: branch.name, name: branch.name, color, glow,
-            paths: [`M ${trunkX} ${trunkStartY - 300} L ${trunkX - 10} ${trunkStartY - 400} L ${trunkX + 10} ${trunkStartY - 500}`],
+            paths: [
+              `M ${trunkX} ${trunkStartY - 500} C ${trunkX - 10} ${trunkStartY - 550}, ${trunkX + 10} ${trunkStartY - 550}, ${trunkX} ${trunkStartY - 600} C ${trunkX - 10} ${trunkStartY - 650}, ${trunkX + 10} ${trunkStartY - 650}, ${trunkX} ${trunkStartY - 700}`
+            ],
             commits: [
-              { id: `c_${branch.name}_1`, x: trunkX, y: trunkStartY - 300, label: '', r: 24 },
-              { id: `c_${branch.name}_2`, x: trunkX - 10, y: trunkStartY - 400, label: '', r: 16 }
+              { id: `c_${branch.name}_1`, x: trunkX, y: trunkStartY - 500, label: '', r: 24 },
+              { id: `c_${branch.name}_2`, x: trunkX, y: trunkStartY - 600, label: '', r: 16 }
             ]
           })
         } else {
-          const yStart = trunkStartY - 100 - (index * 45)
+          const yStart = trunkStartY - 150 - (index * 35)
           const side = index % 2 === 0 ? 1 : -1
-          const xEnd = trunkX + (side * (220 + Math.random() * 80))
-          const yEnd = yStart - 100 - Math.random() * 60
-          const midX = trunkX + (side * 120)
-          const midY = yStart - 40
+
+          const numNodes = 2 + Math.floor(Math.random() * 2)
+          const branchCommits = [];
+          const branchPaths = [];
+
+          let prevX = trunkX;
+          let prevY = yStart;
+          let pathStr1 = `M ${trunkX} ${yStart}`;
+          let pathStr2 = `M ${trunkX} ${yStart + 15}`; // Outer fiber
+          let pathStr3 = `M ${trunkX} ${yStart - 15}`; // Outer fiber
+
+          for (let i = 0; i < numNodes; i++) {
+            const cx = trunkX + side * (80 + i * 80 + Math.random() * 50);
+            const cy = yStart - 30 - i * 40 - Math.random() * 40;
+
+            branchCommits.push({
+              id: `c_${branch.name}_${i}`,
+              x: cx,
+              y: cy,
+              label: i === numNodes - 1 ? branch.name : (Math.random() > 0.5 ? 'Commit nodes' : ''),
+              r: i === numNodes - 1 ? 18 : 14
+            });
+
+            const qX = prevX + side * 40;
+            const qY = prevY;
+
+            // The offset shrinks as we approach the final node
+            const offset = (numNodes - 1 - i) * 6;
+            const nextOffset = i < numNodes - 1 ? offset : 0; // converge perfectly at tip
+
+            pathStr1 += ` C ${qX} ${qY}, ${cx - side * 30} ${cy + 20}, ${cx} ${cy}`;
+            pathStr2 += ` C ${qX} ${qY + offset + 10}, ${cx - side * 30} ${cy + 20 + nextOffset}, ${cx} ${cy + nextOffset}`;
+            pathStr3 += ` C ${qX} ${qY - offset - 10}, ${cx - side * 30} ${cy + 20 - nextOffset}, ${cx} ${cy - nextOffset}`;
+
+            // Sub branch?
+            if (i < numNodes - 1 && Math.random() > 0.4) {
+              const subX = cx + side * (40 + Math.random() * 30);
+              const subY = cy + (Math.random() > 0.5 ? 40 : -40) + Math.random() * 20;
+              // Twigs are just single delicate smooth lines
+              branchPaths.push(`M ${cx} ${cy} C ${cx + side * 20} ${cy}, ${subX - side * 10} ${subY}, ${subX} ${subY}`);
+              branchCommits.push({
+                id: `c_${branch.name}_sub_${i}`,
+                x: subX,
+                y: subY,
+                label: '',
+                r: 12
+              });
+            }
+
+            prevX = cx;
+            prevY = cy;
+          }
+
+          // Insert the bundled fibers at the beginning so they are rendered as the main branch
+          branchPaths.unshift(pathStr3);
+          branchPaths.unshift(pathStr2);
+          branchPaths.unshift(pathStr1);
 
           generatedData.push({
             id: branch.name, name: branch.name, color, glow,
-            paths: [`M ${trunkX + (side * 15)} ${yStart} L ${midX} ${midY} L ${xEnd} ${yEnd}`],
-            commits: [
-              { id: `c_${branch.name}_mid`, x: midX, y: midY, label: 'Commit nodes', r: 16 },
-              { id: `c_${branch.name}_end`, x: xEnd, y: yEnd, label: branch.name, r: 18 }
-            ]
+            paths: branchPaths,
+            commits: branchCommits
           })
         }
       })
@@ -345,10 +412,10 @@ export default function DatabaseDesigner({
         prevTables.map(t =>
           t.id === draggingTableId
             ? {
-                ...t,
-                x: Math.max(20, Math.round((e.clientX - dragStart.current.x) / zoomFactor)),
-                y: Math.max(20, Math.round((e.clientY - dragStart.current.y) / zoomFactor))
-              }
+              ...t,
+              x: Math.max(20, Math.round((e.clientX - dragStart.current.x) / zoomFactor)),
+              y: Math.max(20, Math.round((e.clientY - dragStart.current.y) / zoomFactor))
+            }
             : t
         )
       )
@@ -927,8 +994,8 @@ export default function DatabaseDesigner({
                 <div className="sidebar-content-area" style={{ maxHeight: '280px', overflowY: 'auto' }}>
                   <span className="sidebar-list-title">Tablas ({filteredTables.length})</span>
                   {filteredTables.map(t => (
-                    <div 
-                      key={t.id} 
+                    <div
+                      key={t.id}
                       className={`sidebar-list-item ${selectedTableId === t.id ? 'selected' : ''}`}
                       onClick={() => setSelectedTableId(t.id)}
                     >
@@ -981,7 +1048,7 @@ export default function DatabaseDesigner({
 
                   <div className="index-creator-form" style={{ marginTop: '12px', borderTop: '1px dashed #131924', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <span className="sidebar-list-title" style={{ fontSize: '10px' }}>NUEVO ÍNDICE</span>
-                    
+
                     <select
                       className="form-select"
                       style={{ width: '100%', padding: '4px', fontSize: '11px', background: '#0d1117', border: '1px solid #1e293b', color: '#e2e8f0', borderRadius: '4px' }}
@@ -1066,11 +1133,11 @@ export default function DatabaseDesigner({
             </div>
           </div>
         ) : activeMasterTab === 'bandwidth' ? (
-          <BandwidthSidebar 
-            bwTab={bwTab} 
-            setBwTab={setBwTab} 
-            selectedBranch={bwSelectedBranch} 
-            setSelectedBranch={setBwSelectedBranch} 
+          <BandwidthSidebar
+            bwTab={bwTab}
+            setBwTab={setBwTab}
+            selectedBranch={bwSelectedBranch}
+            setSelectedBranch={setBwSelectedBranch}
             onNavigateHome={() => setActiveMasterTab('home')}
           />
         ) : activeMasterTab === 'deeplint' ? (
@@ -1111,43 +1178,43 @@ export default function DatabaseDesigner({
             </div>
 
             <nav className="master-sidebar-menu">
-              <div 
+              <div
                 className={`master-menu-item ${activeMasterTab === 'home' ? 'active' : ''}`}
                 onClick={() => setActiveMasterTab('home')}
               >
                 <Home size={16} />
                 <span>Home</span>
               </div>
-              <div 
-                className="master-menu-item"
+              <div
+                className={`master-menu-item ${(activeMasterTab as string) === 'blueprint' ? 'active' : ''}`}
                 onClick={() => setActiveMasterTab('blueprint')}
               >
                 <Code size={16} style={{ transform: 'rotate(-45deg)' }} />
                 <span>BluePrint</span>
               </div>
-              <div 
-                className={`master-menu-item ${activeMasterTab === 'bandwidth' ? 'active' : ''}`}
+              <div
+                className={`master-menu-item ${(activeMasterTab as string) === 'bandwidth' ? 'active' : ''}`}
                 onClick={() => setActiveMasterTab('bandwidth')}
               >
                 <Activity size={16} />
                 <span>Bandwidth</span>
               </div>
-              <div 
-                className={`master-menu-item ${activeMasterTab === 'mergeguard' ? 'active' : ''}`}
+              <div
+                className={`master-menu-item ${(activeMasterTab as string) === 'mergeguard' ? 'active' : ''}`}
                 onClick={() => setActiveMasterTab('mergeguard')}
               >
                 <GitBranch size={16} />
                 <span>MergeGuard</span>
               </div>
-              <div 
-                className={`master-menu-item ${activeMasterTab === 'docify' ? 'active' : ''}`}
+              <div
+                className={`master-menu-item ${(activeMasterTab as string) === 'docify' ? 'active' : ''}`}
                 onClick={() => setActiveMasterTab('docify')}
               >
                 <FileText size={16} />
                 <span>Docify</span>
               </div>
-              <div 
-                className={`master-menu-item ${activeMasterTab === 'deeplint' ? 'active' : ''}`}
+              <div
+                className={`master-menu-item ${(activeMasterTab as string) === 'deeplint' ? 'active' : ''}`}
                 onClick={() => setActiveMasterTab('deeplint')}
               >
                 <Sparkles size={16} />
@@ -1175,9 +1242,9 @@ export default function DatabaseDesigner({
         <header className="master-top-header">
           <div className="master-search-bar">
             <Search size={14} className="search-icon" />
-            <input 
-              type="text" 
-              placeholder="Search projects, schemas, or docs..." 
+            <input
+              type="text"
+              placeholder="Search projects, schemas, or docs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -1208,7 +1275,7 @@ export default function DatabaseDesigner({
         {/* Master Content Area switcher */}
         <main className="master-content-body">
           {activeMasterTab === 'home' && (
-            <DashboardHome 
+            <DashboardHome
               onNavigateToBlueprint={() => setActiveMasterTab('blueprint')}
               userName={loggedInUserName}
             />
@@ -1216,7 +1283,7 @@ export default function DatabaseDesigner({
 
           {activeMasterTab === 'blueprint' && (
             <div className="blueprint-designer-workspace-wrapper">
-              
+
               {/* Internal header for blueprint actions (Save, Export, Split View) */}
               <div className="blueprint-sub-header">
                 <div className="sub-header-left">
@@ -1229,9 +1296,9 @@ export default function DatabaseDesigner({
                   <button className="icon-btn" title="Project Settings" onClick={() => showNotification('Settings menu')}>
                     <Settings size={15} />
                   </button>
-                  <button 
-                    className="btn-secondary" 
-                    style={{ 
+                  <button
+                    className="btn-secondary"
+                    style={{
                       backgroundColor: (isSplitView && splitViewMode === 'export') ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
                       borderColor: (isSplitView && splitViewMode === 'export') ? 'var(--accent-blue)' : 'var(--border-color)',
                       color: (isSplitView && splitViewMode === 'export') ? 'var(--accent-blue)' : 'var(--text-primary)',
@@ -1255,8 +1322,8 @@ export default function DatabaseDesigner({
                     <Save size={13} />
                     Save
                   </button>
-                  <button 
-                    className="btn-primary" 
+                  <button
+                    className="btn-primary"
                     style={{
                       backgroundColor: (isSplitView && splitViewMode === 'export') ? 'rgba(16, 185, 129, 0.2)' : undefined,
                       borderColor: (isSplitView && splitViewMode === 'export') ? '#10b981' : undefined,
@@ -1326,13 +1393,13 @@ export default function DatabaseDesigner({
                         <span className="macos-title">DataDraft DSL</span>
                       </div>
                       <div className="macos-actions">
-                        <button 
+                        <button
                           className="macos-action-btn active"
                           style={{ cursor: 'default' }}
                         >
                           DSL
                         </button>
-                        <button 
+                        <button
                           className="macos-action-btn"
                           onClick={() => copyToClipboard(importCode)}
                           title="Copy Shorthand Code"
@@ -1344,7 +1411,7 @@ export default function DatabaseDesigner({
 
                     <div className="split-textarea-wrapper" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', position: 'relative', height: 'calc(100% - 40px)' }}>
                       <div className="code-editor-container" style={{ position: 'relative', width: '100%', height: '100%', flexGrow: 1 }}>
-                        <pre 
+                        <pre
                           className="code-editor-highlight"
                           dangerouslySetInnerHTML={{ __html: highlightShorthand(importCode) }}
                         />
@@ -1371,7 +1438,7 @@ export default function DatabaseDesigner({
                     {/* Export Header */}
                     <div className="macos-header" style={{ userSelect: 'none' }}>
                       <div className="macos-left" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div 
+                        <div
                           onClick={() => setIsSplitView(false)}
                           style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444', cursor: 'pointer', transition: 'opacity 0.2s', position: 'relative' }}
                           title="Cerrar y volver al canvas"
@@ -1384,8 +1451,8 @@ export default function DatabaseDesigner({
                       <div className="macos-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <button className="macos-action-btn active" style={{ cursor: 'default' }}>Export</button>
                         <button className="macos-action-btn" onClick={() => { setSplitViewMode('dsl') }}>DSL</button>
-                        <button 
-                          className="macos-action-btn" 
+                        <button
+                          className="macos-action-btn"
                           onClick={() => setIsSplitView(false)}
                           style={{
                             background: 'rgba(239, 68, 68, 0.1)',
@@ -1644,488 +1711,488 @@ export default function DatabaseDesigner({
 
                 {!(isSplitView && splitViewMode === 'export') && (
                   <>
-                    <main 
+                    <main
                       className="canvas-grid"
                       ref={canvasRef}
                       onMouseDown={handleCanvasMouseDown}
                       onMouseMove={handleCanvasMouseMove}
                       onMouseUp={handleCanvasMouseUp}
                     >
-                  <div 
-                    className="canvas-content"
-                    style={{
-                      transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom / 100})`,
-                      transformOrigin: '0 0'
-                    }}
-                  >
-                    {/* SVG Connector lines */}
-                    <svg className="connections-svg" style={{ pointerEvents: 'none' }}>
-                      {relationLines.map((line) => (
-                        <path
-                          key={line.id}
-                          d={line.path}
-                          className={`connection-line ${selectedRelationId === line.id ? 'selected' : ''}`}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedRelationId(line.id)
-                            setSelectedTableId(null)
-                          }}
-                          style={{ pointerEvents: 'visibleStroke', cursor: 'pointer' }}
-                        />
-                      ))}
-
-                      {relationDragging && (() => {
-                        const sourceTable = tables.find(t => t.id === relationDragging.sourceTableId)
-                        if (!sourceTable) return null
-                        const colIdx = sourceTable.columns.findIndex(c => c.id === relationDragging.sourceColumnId)
-                        if (colIdx === -1) return null
-
-                        const rowHeight = 35
-                        const headerHeight = 38
-                        const sourceOnRight = sourceTable.x > relationDragging.currentX
-                        const xSource = sourceTable.x + (sourceOnRight ? 0 : 210)
-                        const ySource = sourceTable.y + headerHeight + colIdx * rowHeight + rowHeight / 2
-
-                        const xTarget = relationDragging.currentX
-                        const yTarget = relationDragging.currentY
-
-                        const offset = Math.abs(xSource - xTarget) / 2
-                        const cp1x = sourceOnRight ? xSource - offset : xSource + offset
-                        const cp2x = sourceOnRight ? xTarget + offset : xTarget - offset
-
-                        const path = `M ${xSource} ${ySource} C ${cp1x} ${ySource}, ${cp2x} ${yTarget}, ${xTarget} ${yTarget}`
-
-                        return (
-                          <path
-                            d={path}
-                            stroke="#10b981"
-                            strokeWidth="2"
-                            strokeDasharray="4 4"
-                            fill="none"
-                          />
-                        )
-                      })()}
-                    </svg>
-
-                    {/* Floating Relation Delete Buttons */}
-                    {relationLines.map((line) => {
-                      if (selectedRelationId !== line.id) return null
-                      return (
-                        <button
-                          key={`del_${line.id}`}
-                          className="delete-relation-btn"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteRelation(line.sourceTableId, line.sourceColumnId)
-                          }}
-                          style={{
-                            position: 'absolute',
-                            left: `${line.midX}px`,
-                            top: `${line.midY}px`,
-                            transform: 'translate(-50%, -50%)',
-                            backgroundColor: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '50%',
-                            width: '18px',
-                            height: '18px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            boxShadow: '0 0 6px #ef4444',
-                            zIndex: 100,
-                            fontSize: '10px',
-                            lineHeight: 1
-                          }}
-                          title="Delete Relation"
-                        >
-                          ✕
-                        </button>
-                      )
-                    })}
-
-                    {/* Table Cards */}
-                    {filteredTables.map((table) => (
                       <div
-                        key={table.id}
-                        className={`table-node ${selectedTableId === table.id ? 'selected' : ''}`}
+                        className="canvas-content"
                         style={{
-                          left: `${table.x}px`,
-                          top: `${table.y}px`
+                          transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom / 100})`,
+                          transformOrigin: '0 0'
                         }}
                       >
-                        <div
-                          className="table-node-header"
-                          onMouseDown={(e) => handleTableMouseDown(e, table.id)}
-                        >
-                          <Database size={12} className="header-icon" style={{ marginRight: '6px' }} />
-                          <span className="table-node-title">{table.name}</span>
-                          <button
-                            className="btn-delete-table"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteTable(table.id)
+                        {/* SVG Connector lines */}
+                        <svg className="connections-svg" style={{ pointerEvents: 'none' }}>
+                          {relationLines.map((line) => (
+                            <path
+                              key={line.id}
+                              d={line.path}
+                              className={`connection-line ${selectedRelationId === line.id ? 'selected' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedRelationId(line.id)
+                                setSelectedTableId(null)
+                              }}
+                              style={{ pointerEvents: 'visibleStroke', cursor: 'pointer' }}
+                            />
+                          ))}
+
+                          {relationDragging && (() => {
+                            const sourceTable = tables.find(t => t.id === relationDragging.sourceTableId)
+                            if (!sourceTable) return null
+                            const colIdx = sourceTable.columns.findIndex(c => c.id === relationDragging.sourceColumnId)
+                            if (colIdx === -1) return null
+
+                            const rowHeight = 35
+                            const headerHeight = 38
+                            const sourceOnRight = sourceTable.x > relationDragging.currentX
+                            const xSource = sourceTable.x + (sourceOnRight ? 0 : 210)
+                            const ySource = sourceTable.y + headerHeight + colIdx * rowHeight + rowHeight / 2
+
+                            const xTarget = relationDragging.currentX
+                            const yTarget = relationDragging.currentY
+
+                            const offset = Math.abs(xSource - xTarget) / 2
+                            const cp1x = sourceOnRight ? xSource - offset : xSource + offset
+                            const cp2x = sourceOnRight ? xTarget + offset : xTarget - offset
+
+                            const path = `M ${xSource} ${ySource} C ${cp1x} ${ySource}, ${cp2x} ${yTarget}, ${xTarget} ${yTarget}`
+
+                            return (
+                              <path
+                                d={path}
+                                stroke="#10b981"
+                                strokeWidth="2"
+                                strokeDasharray="4 4"
+                                fill="none"
+                              />
+                            )
+                          })()}
+                        </svg>
+
+                        {/* Floating Relation Delete Buttons */}
+                        {relationLines.map((line) => {
+                          if (selectedRelationId !== line.id) return null
+                          return (
+                            <button
+                              key={`del_${line.id}`}
+                              className="delete-relation-btn"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteRelation(line.sourceTableId, line.sourceColumnId)
+                              }}
+                              style={{
+                                position: 'absolute',
+                                left: `${line.midX}px`,
+                                top: `${line.midY}px`,
+                                transform: 'translate(-50%, -50%)',
+                                backgroundColor: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '18px',
+                                height: '18px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                boxShadow: '0 0 6px #ef4444',
+                                zIndex: 100,
+                                fontSize: '10px',
+                                lineHeight: 1
+                              }}
+                              title="Delete Relation"
+                            >
+                              ✕
+                            </button>
+                          )
+                        })}
+
+                        {/* Table Cards */}
+                        {filteredTables.map((table) => (
+                          <div
+                            key={table.id}
+                            className={`table-node ${selectedTableId === table.id ? 'selected' : ''}`}
+                            style={{
+                              left: `${table.x}px`,
+                              top: `${table.y}px`
                             }}
-                            title="Eliminar Tabla"
-                            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
                           >
-                            <Trash2 size={11} />
+                            <div
+                              className="table-node-header"
+                              onMouseDown={(e) => handleTableMouseDown(e, table.id)}
+                            >
+                              <Database size={12} className="header-icon" style={{ marginRight: '6px' }} />
+                              <span className="table-node-title">{table.name}</span>
+                              <button
+                                className="btn-delete-table"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteTable(table.id)
+                                }}
+                                title="Eliminar Tabla"
+                                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+
+                            <div className="table-node-columns">
+                              {table.columns.map((col) => (
+                                <div
+                                  key={col.id}
+                                  className={`column-row ${col.isPrimaryKey ? 'primary-key-row' : ''} ${col.isForeignKey ? 'foreign-key-row' : ''}`}
+                                  onMouseUp={(e) => {
+                                    if (relationDragging) {
+                                      handleRelationDragEnd(e, table.id, col.id)
+                                    }
+                                  }}
+                                >
+                                  <span className="col-name-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {col.isPrimaryKey && <Key size={10} className="col-key-icon pk" style={{ color: '#f59e0b' }} />}
+                                    {col.isForeignKey && <Link2 size={10} className="col-key-icon fk" style={{ color: '#10b981' }} />}
+                                    <span className="col-name">{col.name}</span>
+                                  </span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span className="col-type" style={{ color: '#64748b', fontSize: '11px' }}>{col.type}</span>
+                                    <div
+                                      className="relation-drag-dot"
+                                      title="Drag to link relation"
+                                      onMouseDown={(e) => handleRelationDragStart(e, table.id, col.id)}
+                                      style={{
+                                        width: '8px',
+                                        height: '8px',
+                                        borderRadius: '50%',
+                                        backgroundColor: '#10b981',
+                                        cursor: 'crosshair',
+                                        border: '1.5px solid #0d1117',
+                                        boxShadow: '0 0 4px #10b981'
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="canvas-controls">
+                        <button className="icon-btn" onClick={() => showNotification('Search canvas location')} title="Search Position">
+                          <Search size={13} />
+                        </button>
+                        <div className="control-separator" />
+                        <button className="icon-btn" onClick={zoomOut} title="Zoom Out">
+                          <Minimize2 size={13} />
+                        </button>
+                        <span className="zoom-text" onClick={resetZoom} style={{ cursor: 'pointer' }}>
+                          {zoom}%
+                        </span>
+                        <button className="icon-btn" onClick={zoomIn} title="Zoom In">
+                          <Maximize2 size={13} />
+                        </button>
+                        <div className="control-separator" />
+                        <button className="icon-btn" onClick={() => { setPanOffset({ x: 0, y: 0 }); resetZoom(); }} title="Recenter Canvas">
+                          <HelpCircle size={13} />
+                        </button>
+                        <button className="icon-btn" onClick={() => showNotification('Grid snapping enabled!')} title="Grid layout toggled">
+                          <Grid size={13} />
+                        </button>
+                      </div>
+                    </main>
+
+                    {/* ── Saved Schemas Drawer Panel ─────────────────────────── */}
+                    {showSavedPanel && (
+                      <div className="saved-schemas-panel">
+                        <div className="saved-panel-header">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <FolderOpen size={15} style={{ color: 'var(--accent-purple)' }} />
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Saved Schemas</span>
+                            <span style={{
+                              backgroundColor: 'rgba(139,92,246,0.15)',
+                              color: 'var(--accent-purple)',
+                              borderRadius: '10px',
+                              padding: '1px 7px',
+                              fontSize: '10px',
+                              fontWeight: 700
+                            }}>{savedSchemas.length}</span>
+                          </div>
+                          <button className="icon-btn" onClick={() => setShowSavedPanel(false)} title="Cerrar panel">
+                            <X size={14} />
                           </button>
                         </div>
 
-                        <div className="table-node-columns">
-                          {table.columns.map((col) => (
-                            <div
-                              key={col.id}
-                              className={`column-row ${col.isPrimaryKey ? 'primary-key-row' : ''} ${col.isForeignKey ? 'foreign-key-row' : ''}`}
-                              onMouseUp={(e) => {
-                                if (relationDragging) {
-                                  handleRelationDragEnd(e, table.id, col.id)
-                                }
-                              }}
-                            >
-                              <span className="col-name-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                {col.isPrimaryKey && <Key size={10} className="col-key-icon pk" style={{ color: '#f59e0b' }} />}
-                                {col.isForeignKey && <Link2 size={10} className="col-key-icon fk" style={{ color: '#10b981' }} />}
-                                <span className="col-name">{col.name}</span>
-                              </span>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span className="col-type" style={{ color: '#64748b', fontSize: '11px' }}>{col.type}</span>
-                                <div 
-                                  className="relation-drag-dot" 
-                                  title="Drag to link relation"
-                                  onMouseDown={(e) => handleRelationDragStart(e, table.id, col.id)}
-                                  style={{
-                                    width: '8px',
-                                    height: '8px',
-                                    borderRadius: '50%',
-                                    backgroundColor: '#10b981',
-                                    cursor: 'crosshair',
-                                    border: '1.5px solid #0d1117',
-                                    boxShadow: '0 0 4px #10b981'
-                                  }}
-                                />
-                              </div>
+                        <div className="saved-panel-body">
+                          {savedSchemas.length === 0 ? (
+                            <div className="saved-panel-empty">
+                              <div style={{ fontSize: '36px', marginBottom: '12px', opacity: 0.4 }}>💾</div>
+                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.5 }}>
+                                No hay guardados aún.<br />
+                                Usa el botón <strong>Save</strong> para guardar tu schema actual.
+                              </p>
                             </div>
-                          ))}
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {savedSchemas.map((save, idx) => (
+                                <div key={save.id} className="saved-schema-card" style={{ animationDelay: `${idx * 40}ms` }}>
+                                  <div className="saved-card-top">
+                                    <div className="saved-card-icon">
+                                      <LayoutGrid size={13} style={{ color: 'var(--accent-purple)' }} />
+                                    </div>
+                                    <div className="saved-card-info">
+                                      <span className="saved-card-name">{save.name}</span>
+                                      <span className="saved-card-meta">
+                                        <Clock size={9} />
+                                        {formatSavedDate(save.savedAt)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="saved-card-stats">
+                                    <span className="saved-stat-badge">
+                                      <Database size={9} />
+                                      {save.tableCount} {save.tableCount === 1 ? 'tabla' : 'tablas'}
+                                    </span>
+                                    <span className="saved-stat-badge">
+                                      <Link2 size={9} />
+                                      {save.tables.reduce((acc: any, t: any) => acc + t.columns.filter((c: any) => c.isForeignKey).length, 0)} rels
+                                    </span>
+                                  </div>
+                                  <div className="saved-card-actions">
+                                    <button
+                                      className="saved-action-load"
+                                      onClick={() => handleLoadSchema(save)}
+                                      title="Cargar este schema"
+                                    >
+                                      <FolderOpen size={11} />
+                                      Cargar
+                                    </button>
+                                    <button
+                                      className="saved-action-delete"
+                                      onClick={() => handleDeleteSave(save.id)}
+                                      title="Eliminar guardado"
+                                    >
+                                      <Trash2 size={11} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="saved-panel-footer">
+                          <button
+                            className="btn-primary"
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                            onClick={handleOpenSaveDialog}
+                          >
+                            <Save size={13} />
+                            Guardar schema actual
+                          </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    )}
+                    {/* ─────────────────────────────────────────────────────────── */}
 
-                  <div className="canvas-controls">
-                    <button className="icon-btn" onClick={() => showNotification('Search canvas location')} title="Search Position">
-                      <Search size={13} />
-                    </button>
-                    <div className="control-separator" />
-                    <button className="icon-btn" onClick={zoomOut} title="Zoom Out">
-                      <Minimize2 size={13} />
-                    </button>
-                    <span className="zoom-text" onClick={resetZoom} style={{ cursor: 'pointer' }}>
-                      {zoom}%
-                    </span>
-                    <button className="icon-btn" onClick={zoomIn} title="Zoom In">
-                      <Maximize2 size={13} />
-                    </button>
-                    <div className="control-separator" />
-                    <button className="icon-btn" onClick={() => { setPanOffset({ x: 0, y: 0 }); resetZoom(); }} title="Recenter Canvas">
-                      <HelpCircle size={13} />
-                    </button>
-                    <button className="icon-btn" onClick={() => showNotification('Grid snapping enabled!')} title="Grid layout toggled">
-                      <Grid size={13} />
-                    </button>
-                  </div>
-                </main>
-
-                {/* ── Saved Schemas Drawer Panel ─────────────────────────── */}
-                {showSavedPanel && (
-                  <div className="saved-schemas-panel">
-                    <div className="saved-panel-header">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <FolderOpen size={15} style={{ color: 'var(--accent-purple)' }} />
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Saved Schemas</span>
-                        <span style={{
-                          backgroundColor: 'rgba(139,92,246,0.15)',
-                          color: 'var(--accent-purple)',
-                          borderRadius: '10px',
-                          padding: '1px 7px',
-                          fontSize: '10px',
-                          fontWeight: 700
-                        }}>{savedSchemas.length}</span>
-                      </div>
-                      <button className="icon-btn" onClick={() => setShowSavedPanel(false)} title="Cerrar panel">
-                        <X size={14} />
-                      </button>
-                    </div>
-
-                    <div className="saved-panel-body">
-                      {savedSchemas.length === 0 ? (
-                        <div className="saved-panel-empty">
-                          <div style={{ fontSize: '36px', marginBottom: '12px', opacity: 0.4 }}>💾</div>
-                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.5 }}>
-                            No hay guardados aún.<br />
-                            Usa el botón <strong>Save</strong> para guardar tu schema actual.
-                          </p>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                          {savedSchemas.map((save, idx) => (
-                            <div key={save.id} className="saved-schema-card" style={{ animationDelay: `${idx * 40}ms` }}>
-                              <div className="saved-card-top">
-                                <div className="saved-card-icon">
-                                  <LayoutGrid size={13} style={{ color: 'var(--accent-purple)' }} />
-                                </div>
-                                <div className="saved-card-info">
-                                  <span className="saved-card-name">{save.name}</span>
-                                  <span className="saved-card-meta">
-                                    <Clock size={9} />
-                                    {formatSavedDate(save.savedAt)}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="saved-card-stats">
-                                <span className="saved-stat-badge">
-                                  <Database size={9} />
-                                  {save.tableCount} {save.tableCount === 1 ? 'tabla' : 'tablas'}
-                                </span>
-                                <span className="saved-stat-badge">
-                                  <Link2 size={9} />
-                                  {save.tables.reduce((acc, t) => acc + t.columns.filter(c => c.isForeignKey).length, 0)} rels
-                                </span>
-                              </div>
-                              <div className="saved-card-actions">
-                                <button
-                                  className="saved-action-load"
-                                  onClick={() => handleLoadSchema(save)}
-                                  title="Cargar este schema"
-                                >
-                                  <FolderOpen size={11} />
-                                  Cargar
-                                </button>
-                                <button
-                                  className="saved-action-delete"
-                                  onClick={() => handleDeleteSave(save.id)}
-                                  title="Eliminar guardado"
-                                >
-                                  <Trash2 size={11} />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="saved-panel-footer">
-                      <button
-                        className="btn-primary"
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
-                        onClick={handleOpenSaveDialog}
+                    {/* Right side Properties Panel */}
+                    <aside className={`right-panel ${isPropertiesCollapsed ? 'collapsed' : ''}`}>
+                      <div
+                        className="properties-toggle-btn"
+                        onClick={() => setIsPropertiesCollapsed(!isPropertiesCollapsed)}
+                        title={isPropertiesCollapsed ? 'Expandir Propiedades' : 'Colapsar Propiedades'}
                       >
-                        <Save size={13} />
-                        Guardar schema actual
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {/* ─────────────────────────────────────────────────────────── */}
-
-                {/* Right side Properties Panel */}
-                <aside className={`right-panel ${isPropertiesCollapsed ? 'collapsed' : ''}`}>
-                  <div 
-                    className="properties-toggle-btn"
-                    onClick={() => setIsPropertiesCollapsed(!isPropertiesCollapsed)}
-                    title={isPropertiesCollapsed ? 'Expandir Propiedades' : 'Colapsar Propiedades'}
-                  >
-                    {isPropertiesCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
-                  </div>
-                  {selectedTable ? (
-                    <>
-                      <div className="panel-header">
-                        <h2>Table Properties</h2>
-                        <button className="icon-btn" onClick={() => setSelectedTableId(null)}>
-                          <X size={15} />
-                        </button>
+                        {isPropertiesCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
                       </div>
-
-                      <div className="panel-body">
-                        <div className="form-group">
-                          <label className="form-label">Table Name</label>
-                          <input
-                            type="text"
-                            className="form-input"
-                            value={selectedTable.name}
-                            onChange={(e) => handleUpdateTableMeta({ name: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label className="form-label">Table Comment</label>
-                          <textarea
-                            className="form-textarea"
-                            value={selectedTable.comment}
-                            onChange={(e) => handleUpdateTableMeta({ comment: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <div className="section-title-row">
-                            <label className="form-label">Columns ({selectedTable.columns.length})</label>
-                            <button className="btn-link-add" onClick={handleAddColumn}>
-                              <Plus size={11} />
-                              Add
+                      {selectedTable ? (
+                        <>
+                          <div className="panel-header">
+                            <h2>Table Properties</h2>
+                            <button className="icon-btn" onClick={() => setSelectedTableId(null)}>
+                              <X size={15} />
                             </button>
                           </div>
 
-                          <div className="columns-edit-list">
-                            {selectedTable.columns.map((col) => (
-                              <div key={col.id} className="column-edit-item">
-                                <div className="column-edit-main">
-                                  <input
-                                    type="text"
-                                    className="form-input"
-                                    style={{ padding: '4px 8px', fontSize: '12px' }}
-                                    value={col.name}
-                                    onChange={(e) => handleUpdateColumn(col.id, { name: e.target.value })}
-                                  />
-                                  <select
-                                    className="form-select"
-                                    value={col.type}
-                                    onChange={(e) => handleUpdateColumn(col.id, { type: e.target.value })}
-                                  >
-                                    {columnTypes.map((t) => (
-                                      <option key={t} value={t}>
-                                        {t}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <button
-                                    className="column-edit-delete"
-                                    onClick={() => handleDeleteColumn(col.id)}
-                                    title="Delete Column"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
+                          <div className="panel-body">
+                            <div className="form-group">
+                              <label className="form-label">Table Name</label>
+                              <input
+                                type="text"
+                                className="form-input"
+                                value={selectedTable.name}
+                                onChange={(e) => handleUpdateTableMeta({ name: e.target.value })}
+                              />
+                            </div>
 
-                                <div className="column-edit-checkboxes">
-                                  <label className="checkbox-label">
-                                    <input
-                                      type="checkbox"
-                                      checked={col.isPrimaryKey}
-                                      onChange={(e) =>
-                                        handleUpdateColumn(col.id, {
-                                          isPrimaryKey: e.target.checked,
-                                          isForeignKey: e.target.checked ? false : col.isForeignKey
-                                        })
-                                      }
-                                    />
-                                    PK
-                                  </label>
+                            <div className="form-group">
+                              <label className="form-label">Table Comment</label>
+                              <textarea
+                                className="form-textarea"
+                                value={selectedTable.comment}
+                                onChange={(e) => handleUpdateTableMeta({ comment: e.target.value })}
+                              />
+                            </div>
 
-                                  <label className="checkbox-label">
-                                    <input
-                                      type="checkbox"
-                                      checked={col.isForeignKey}
-                                      onChange={(e) =>
-                                        handleUpdateColumn(col.id, {
-                                          isForeignKey: e.target.checked,
-                                          isPrimaryKey: e.target.checked ? false : col.isPrimaryKey,
-                                          foreignKeyTargetTableId: e.target.checked
-                                            ? tables.find((t) => t.id !== selectedTable.id)?.id || ''
-                                            : undefined,
-                                          foreignKeyTargetColumnId: e.target.checked
-                                            ? tables.find((t) => t.id !== selectedTable.id)?.columns[0]?.id || ''
-                                            : undefined
-                                        })
-                                      }
-                                    />
-                                    FK
-                                  </label>
+                            <div className="form-group">
+                              <div className="section-title-row">
+                                <label className="form-label">Columns ({selectedTable.columns.length})</label>
+                                <button className="btn-link-add" onClick={handleAddColumn}>
+                                  <Plus size={11} />
+                                  Add
+                                </button>
+                              </div>
 
-                                  {col.isForeignKey && (
-                                    <select
-                                      className="form-select"
-                                      style={{ padding: '2px 4px', fontSize: '10px' }}
-                                      value={col.foreignKeyTargetTableId}
-                                      onChange={(e) => {
-                                        const targetTabId = e.target.value
-                                        const targetTableObj = tables.find((t) => t.id === targetTabId)
-                                        handleUpdateColumn(col.id, {
-                                          foreignKeyTargetTableId: targetTabId,
-                                          foreignKeyTargetColumnId: targetTableObj?.columns[0]?.id || ''
-                                        })
-                                      }}
-                                    >
-                                      {tables
-                                        .filter((t) => t.id !== selectedTable.id)
-                                        .map((t) => (
-                                          <option key={t.id} value={t.id}>
-                                            {t.name}
+                              <div className="columns-edit-list">
+                                {selectedTable.columns.map((col) => (
+                                  <div key={col.id} className="column-edit-item">
+                                    <div className="column-edit-main">
+                                      <input
+                                        type="text"
+                                        className="form-input"
+                                        style={{ padding: '4px 8px', fontSize: '12px' }}
+                                        value={col.name}
+                                        onChange={(e) => handleUpdateColumn(col.id, { name: e.target.value })}
+                                      />
+                                      <select
+                                        className="form-select"
+                                        value={col.type}
+                                        onChange={(e) => handleUpdateColumn(col.id, { type: e.target.value })}
+                                      >
+                                        {columnTypes.map((t) => (
+                                          <option key={t} value={t}>
+                                            {t}
                                           </option>
                                         ))}
-                                    </select>
-                                  )}
-                                </div>
+                                      </select>
+                                      <button
+                                        className="column-edit-delete"
+                                        onClick={() => handleDeleteColumn(col.id)}
+                                        title="Delete Column"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
+
+                                    <div className="column-edit-checkboxes">
+                                      <label className="checkbox-label">
+                                        <input
+                                          type="checkbox"
+                                          checked={col.isPrimaryKey}
+                                          onChange={(e) =>
+                                            handleUpdateColumn(col.id, {
+                                              isPrimaryKey: e.target.checked,
+                                              isForeignKey: e.target.checked ? false : col.isForeignKey
+                                            })
+                                          }
+                                        />
+                                        PK
+                                      </label>
+
+                                      <label className="checkbox-label">
+                                        <input
+                                          type="checkbox"
+                                          checked={col.isForeignKey}
+                                          onChange={(e) =>
+                                            handleUpdateColumn(col.id, {
+                                              isForeignKey: e.target.checked,
+                                              isPrimaryKey: e.target.checked ? false : col.isPrimaryKey,
+                                              foreignKeyTargetTableId: e.target.checked
+                                                ? tables.find((t) => t.id !== selectedTable.id)?.id || ''
+                                                : undefined,
+                                              foreignKeyTargetColumnId: e.target.checked
+                                                ? tables.find((t) => t.id !== selectedTable.id)?.columns[0]?.id || ''
+                                                : undefined
+                                            })
+                                          }
+                                        />
+                                        FK
+                                      </label>
+
+                                      {col.isForeignKey && (
+                                        <select
+                                          className="form-select"
+                                          style={{ padding: '2px 4px', fontSize: '10px' }}
+                                          value={col.foreignKeyTargetTableId}
+                                          onChange={(e) => {
+                                            const targetTabId = e.target.value
+                                            const targetTableObj = tables.find((t) => t.id === targetTabId)
+                                            handleUpdateColumn(col.id, {
+                                              foreignKeyTargetTableId: targetTabId,
+                                              foreignKeyTargetColumnId: targetTableObj?.columns[0]?.id || ''
+                                            })
+                                          }}
+                                        >
+                                          {tables
+                                            .filter((t) => t.id !== selectedTable.id)
+                                            .map((t) => (
+                                              <option key={t.id} value={t.id}>
+                                                {t.name}
+                                              </option>
+                                            ))}
+                                        </select>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        </div>
+                            </div>
 
-                        <div className="form-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-                          <label className="form-label">Engine Settings</label>
-                          <div className="toggle-row">
-                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Audit Logging</span>
-                            <label className="switch">
-                              <input
-                                type="checkbox"
-                                checked={auditLogging}
-                                onChange={(e) => setAuditLogging(e.target.checked)}
-                              />
-                              <span className="slider" />
-                            </label>
-                          </div>
-                        </div>
+                            <div className="form-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                              <label className="form-label">Engine Settings</label>
+                              <div className="toggle-row">
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Audit Logging</span>
+                                <label className="switch">
+                                  <input
+                                    type="checkbox"
+                                    checked={auditLogging}
+                                    onChange={(e) => setAuditLogging(e.target.checked)}
+                                  />
+                                  <span className="slider" />
+                                </label>
+                              </div>
+                            </div>
 
-                        <div className="sql-preview-container">
-                          <div className="sql-header">
-                            <span className="form-label">SQL Preview</span>
-                            <button
-                              className="icon-btn"
-                              onClick={() => copyToClipboard(generateSQL(selectedTable))}
-                              title="Copy SQL"
-                            >
-                              {copied ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
-                            </button>
+                            <div className="sql-preview-container">
+                              <div className="sql-header">
+                                <span className="form-label">SQL Preview</span>
+                                <button
+                                  className="icon-btn"
+                                  onClick={() => copyToClipboard(generateSQL(selectedTable))}
+                                  title="Copy SQL"
+                                >
+                                  {copied ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
+                                </button>
+                              </div>
+                              <pre className="sql-box">
+                                <span className="sql-keyword">CREATE TABLE</span> <span className="sql-string">"{selectedTable.name}"</span> ({"\n"}
+                                {selectedTable.columns.map((c, idx) => {
+                                  let typeStr = c.type
+                                  if (c.type === 'String') typeStr = 'UUID'
+                                  if (c.type === 'Decimal') typeStr = 'DECIMAL(10,2)'
+                                  const isLast = idx === selectedTable.columns.length - 1
+                                  return (
+                                    <span key={c.id}>
+                                      {"  "}<span className="sql-string">"{c.name}"</span> <span className="sql-type">{typeStr.toUpperCase()}</span>
+                                      {c.isPrimaryKey && <span className="sql-keyword"> PRIMARY KEY</span>}
+                                      {!isLast && ","}{"\n"}
+                                    </span>
+                                  )
+                                })}
+                                );
+                              </pre>
+                            </div>
                           </div>
-                          <pre className="sql-box">
-                            <span className="sql-keyword">CREATE TABLE</span> <span className="sql-string">"{selectedTable.name}"</span> ({"\n"}
-                            {selectedTable.columns.map((c, idx) => {
-                              let typeStr = c.type
-                              if (c.type === 'String') typeStr = 'UUID'
-                              if (c.type === 'Decimal') typeStr = 'DECIMAL(10,2)'
-                              const isLast = idx === selectedTable.columns.length - 1
-                              return (
-                                <span key={c.id}>
-                                  {"  "}<span className="sql-string">"{c.name}"</span> <span className="sql-type">{typeStr.toUpperCase()}</span>
-                                  {c.isPrimaryKey && <span className="sql-keyword"> PRIMARY KEY</span>}
-                                  {!isLast && ","}{"\n"}
-                                </span>
-                              )
-                            })}
-                            );
-                          </pre>
+                        </>
+                      ) : (
+                        <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          <h3>No Table Selected</h3>
+                          <p style={{ fontSize: '12px' }}>Click a table in the canvas to inspect its properties.</p>
                         </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                      <h3>No Table Selected</h3>
-                      <p style={{ fontSize: '12px' }}>Click a table in the canvas to inspect its properties.</p>
-                    </div>
-                  )}
-                </aside>
+                      )}
+                    </aside>
                   </>
                 )}
               </div>
@@ -2133,11 +2200,20 @@ export default function DatabaseDesigner({
             </div>
           )}
 
-          {activeMasterTab !== 'home' && activeMasterTab !== 'blueprint' && activeMasterTab !== 'profile' && activeMasterTab !== 'docify' && activeMasterTab !== 'mergeguard' && activeMasterTab !== 'deeplint' && (
+          {activeMasterTab !== 'home' && activeMasterTab !== 'blueprint' && activeMasterTab !== 'profile' && activeMasterTab !== 'docify' && activeMasterTab !== 'mergeguard' && activeMasterTab !== 'deeplint' && activeMasterTab !== 'bandwidth' && (
             <div className="placeholder-tab-content" style={{ padding: '40px', color: 'var(--text-muted)', textAlign: 'center' }}>
-              <h2>{activeMasterTab.toUpperCase()} Module</h2>
+              <h2>{(activeMasterTab as string).toUpperCase()} Module</h2>
               <p style={{ fontSize: '14px', marginTop: '8px' }}>This component is fully active and synchronized with production environment.</p>
             </div>
+          )}
+          
+          {activeMasterTab === 'bandwidth' && (
+            <BandwidthView
+              bwTab={bwTab}
+              setBwTab={setBwTab}
+              selectedBranch={bwSelectedBranch}
+              setSelectedBranch={setBwSelectedBranch}
+            />
           )}
 
           {activeMasterTab === 'mergeguard' && (

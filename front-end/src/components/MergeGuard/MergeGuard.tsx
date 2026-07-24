@@ -163,7 +163,7 @@ interface MergeGuardProps {
   onAnalyze: () => void
 }
 
-const MergeGuard: React.FC<MergeGuardProps> = ({ repoUrl, setRepoUrl, isAnalyzing, treeData, repoStats, onAnalyze }) => {
+const MergeGuard: React.FC<MergeGuardProps> = ({ repoUrl: _repoUrl, setRepoUrl: _setRepoUrl, isAnalyzing: _isAnalyzing, treeData, repoStats, onAnalyze: _onAnalyze }) => {
 
   return (
     <div className="mergeguard-container">
