@@ -1,9 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   GitBranch, GitMerge, Activity, FileText, ArrowLeft,
-  RefreshCw, Columns, AlignLeft, Copy, Check, Plus,
-  AlertTriangle, Link2, ChevronDown, X, Zap, Circle,
-  Database, Search, FolderOpen, Code
+  Columns, AlignLeft, Copy, Check, Plus,
+  AlertTriangle, X, Zap, Code
 } from 'lucide-react'
 
 // ══════════════════════════════════════════════════════════════════
@@ -416,7 +415,7 @@ function BranchTreeCanvas({
           {/* ── Branches ── */}
           {BRANCHES_DATA.map((br, bIdx) => {
             const isActive = activeBranch === br.id
-            const { tipX, tipY, fy, dots, paths, stemPath } = getOrganicBranchData(
+            const { tipX, tipY, dots, paths, stemPath } = getOrganicBranchData(
               br.forkFromMainIndex, br.commits.length, br.side, isActive, br.id
             )
             const shouldBloom = br.commits.length >= 5
@@ -874,9 +873,9 @@ function CommitListView({
                       K
                     </div>
                     <span>
-                      <span style={{ color: '#e6edf3', fontWeight: 500 }}>kiro-developer</span> committed {'date' in c ? c.date : 'just now'}
+                      <span style={{ color: '#e6edf3', fontWeight: 500 }}>kiro-developer</span> committed {'date' in c ? (c as MainCommit).date : 'just now'}
                     </span>
-                    {'isMerge' in c && c.isMerge && (
+                    {'isMerge' in c && (c as MainCommit).isMerge && (
                       <span style={{ background: 'rgba(139,92,246,0.15)', color: '#a78bfa', padding: '1px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600 }}>MERGE</span>
                     )}
                   </div>

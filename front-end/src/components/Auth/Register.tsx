@@ -35,23 +35,27 @@ export default function Register({
       const response = await fetch('http://localhost:3000/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          fullName: authInputs.fullName, 
-          email: authInputs.username, 
-          password: authInputs.password 
+        body: JSON.stringify({
+          fullName: authInputs.fullName,
+          email: authInputs.username,
+          password: authInputs.password
         }),
       })
-      await response.json()
+      const data = await response.json()
       if (!response.ok) {
-        setRegisterConflict(true)
+        if (response.status === 400 && data.error?.includes('correo ya está registrado')) {
+          setRegisterConflict(true)
+        } else {
+          setRegisterConflict(false)
+          showNotification(data.error || 'No se pudo crear la cuenta')
+        }
         return
       }
       setRegisterConflict(false)
       localStorage.setItem('userFullName', authInputs.fullName)
       setAuthScreen('success')
     } catch (err) {
-      localStorage.setItem('userFullName', authInputs.fullName || 'Guest Developer')
-      setAuthScreen('success')
+      showNotification('Error de conexión con el servidor')
     }
   }
 

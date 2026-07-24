@@ -34,23 +34,11 @@ export default function App() {
     <div className="app-container">
       {/* Success Notification Alert */}
       {notification && (
-        <div style={{
-          position: 'fixed',
-          top: '64px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          backgroundColor: '#1e293b',
-          color: '#38bdf8',
-          padding: '8px 16px',
-          borderRadius: '20px',
-          border: '1px solid #38bdf8',
-          fontSize: '12px',
-          fontWeight: 600,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-          zIndex: 100,
-          pointerEvents: 'none'
-        }}>
-          {notification}
+        <div className="session-toast">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="#34d399" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+          <span>{notification}</span>
         </div>
       )}
 

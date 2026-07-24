@@ -33,9 +33,17 @@ import {
 } from 'lucide-react'
 import { DashboardHome } from '../Dashboard/DashboardHome'
 import { UserProfileView } from '../Dashboard/UserProfileView'
-import { BandwidthView, BandwidthSidebar } from '../Dashboard/BandwidthView'
+import { BandwidthSidebar } from '../Dashboard/BandwidthView'
 
 type BwTab = 'home' | 'tree' | 'commits'
+
+interface SavedSchema {
+  id: string
+  name: string
+  savedAt: string
+  tableCount: number
+  tables: Table[]
+}
 
 import type { Table, Column, DatabaseDesignerProps } from './types';
 import { DocifyView } from './DocifyView';
@@ -759,6 +767,51 @@ export default function DatabaseDesigner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRelationId, selectedTableId, relationLines, tables])
 
+  // Save system helpers
+  const formatSavedDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr)
+      return d.toLocaleDateString('es-MX', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    } catch {
+      return dateStr
+    }
+  }
+
+  const handleOpenSaveDialog = () => {
+    setSaveDialogName('')
+    setSaveDialogOpen(true)
+  }
+
+  const handleConfirmSave = () => {
+    if (!saveDialogName.trim()) return
+    const newSave: SavedSchema = {
+      id: `save_${Date.now()}`,
+      name: saveDialogName.trim(),
+      savedAt: new Date().toISOString(),
+      tableCount: tables.length,
+      tables: JSON.parse(JSON.stringify(tables))
+    }
+    const updated = [...savedSchemas, newSave]
+    setSavedSchemas(updated)
+    localStorage.setItem('db_blueprint_saves', JSON.stringify(updated))
+    setSaveDialogOpen(false)
+    showNotification(`Schema "${newSave.name}" guardado!`)
+  }
+
+  const handleLoadSchema = (save: SavedSchema) => {
+    setTables(save.tables)
+    setImportCode(serializeTablesToShorthand(save.tables))
+    setShowSavedPanel(false)
+    showNotification(`Schema "${save.name}" cargado!`)
+  }
+
+  const handleDeleteSave = (saveId: string) => {
+    const updated = savedSchemas.filter(s => s.id !== saveId)
+    setSavedSchemas(updated)
+    localStorage.setItem('db_blueprint_saves', JSON.stringify(updated))
+    showNotification('Guardado eliminado')
+  }
+
   const filteredTables = tables.filter(t =>
     t.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -1017,8 +1070,8 @@ export default function DatabaseDesigner({
                 <span>BluePrint</span>
               </div>
               <div 
-                className={`master-menu-item ${activeMasterTab === 'bandwidth' ? 'active' : ''}`}
-                onClick={() => setActiveMasterTab('bandwidth')}
+                className={`master-menu-item ${(activeMasterTab as string) === 'bandwidth' ? 'active' : ''}`}
+                onClick={() => setActiveMasterTab('bandwidth' as typeof activeMasterTab)}
               >
                 <Activity size={16} />
                 <span>Bandwidth</span>
@@ -1782,7 +1835,7 @@ export default function DatabaseDesigner({
                                 </span>
                                 <span className="saved-stat-badge">
                                   <Link2 size={9} />
-                                  {save.tables.reduce((acc, t) => acc + t.columns.filter(c => c.isForeignKey).length, 0)} rels
+                                  {save.tables.reduce((acc: number, t: Table) => acc + t.columns.filter((c: Column) => c.isForeignKey).length, 0)} rels
                                 </span>
                               </div>
                               <div className="saved-card-actions">
