@@ -25,7 +25,8 @@ import {
   GitBranch,
   Sparkles,
   Bell,
-  ArrowLeft
+  ArrowLeft,
+  Users
 } from 'lucide-react'
 import { DashboardHome } from '../Dashboard/DashboardHome'
 import { UserProfileView } from '../Dashboard/UserProfileView'
@@ -34,6 +35,7 @@ import type { Table, Column, DatabaseDesignerProps } from './types';
 import { DocifyView } from './DocifyView';
 import { highlightShorthand, serializeTablesToShorthand } from './utils';
 import MergeGuard from '../MergeGuard/MergeGuard';
+import StackAgent from '../StackAgent/StackAgent';
 
 export default function DatabaseDesigner({
   setAuthScreen,
@@ -235,10 +237,10 @@ export default function DatabaseDesigner({
         prevTables.map(t =>
           t.id === draggingTableId
             ? {
-                ...t,
-                x: Math.max(20, Math.round((e.clientX - dragStart.current.x) / zoomFactor)),
-                y: Math.max(20, Math.round((e.clientY - dragStart.current.y) / zoomFactor))
-              }
+              ...t,
+              x: Math.max(20, Math.round((e.clientX - dragStart.current.x) / zoomFactor)),
+              y: Math.max(20, Math.round((e.clientY - dragStart.current.y) / zoomFactor))
+            }
             : t
         )
       )
@@ -741,333 +743,339 @@ export default function DatabaseDesigner({
   return (
     <div className="devsync-dashboard-wrapper">
       {/* Master Left Navigation Sidebar */}
-      <aside className="master-left-sidebar">
-        {activeMasterTab === 'blueprint' ? (
-          <div className="left-sidebar" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'transparent', borderRight: 'none' }}>
-            <div className="master-sidebar-logo-group" style={{ cursor: 'pointer', borderBottom: '1px solid #131924' }} onClick={() => setActiveMasterTab('home')}>
-              <ArrowLeft size={16} style={{ color: '#94a3b8', marginRight: '8px' }} />
-              <div className="master-logo-text-group">
-                <span className="master-logo-text" style={{ fontSize: '13px' }}>Database Blueprint</span>
-                <span className="master-logo-sub">visual-schema</span>
-              </div>
-            </div>
-
-            <div className="sidebar-top" style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
-              <div className="explorer-card" style={{ marginBottom: '8px' }}>
-                <div className="explorer-icon-wrapper">
-                  <Database size={16} />
-                </div>
-                <div className="explorer-info">
-                  <h3>Schema Explorer</h3>
-                  <p>PostgreSQL v15</p>
+      {activeMasterTab !== 'docify' && activeMasterTab !== 'bandwidth' && (
+        <aside className="master-left-sidebar">
+          {activeMasterTab === 'blueprint' ? (
+            <div className="left-sidebar" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'transparent', borderRight: 'none' }}>
+              <div className="master-sidebar-logo-group" style={{ cursor: 'pointer', borderBottom: '1px solid #131924' }} onClick={() => setActiveMasterTab('home')}>
+                <ArrowLeft size={16} style={{ color: '#94a3b8', marginRight: '8px' }} />
+                <div className="master-logo-text-group">
+                  <span className="master-logo-text" style={{ fontSize: '13px' }}>Database Blueprint</span>
+                  <span className="master-logo-sub">visual-schema</span>
                 </div>
               </div>
 
-              <button className="btn-new-table" onClick={handleAddTable}>
-                <Plus size={14} />
-                NEW TABLE
-              </button>
+              <div className="sidebar-top" style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
+                <div className="explorer-card" style={{ marginBottom: '8px' }}>
+                  <div className="explorer-icon-wrapper">
+                    <Database size={16} />
+                  </div>
+                  <div className="explorer-info">
+                    <h3>Schema Explorer</h3>
+                    <p>PostgreSQL v15</p>
+                  </div>
+                </div>
 
-              <button
-                className="btn-new-table"
-                style={{
-                  backgroundColor: 'rgba(56, 189, 248, 0.08)',
-                  borderColor: 'var(--accent-blue)',
-                  color: 'var(--accent-blue)',
-                  marginTop: '4px'
-                }}
-                onClick={() => {
-                  if (isSplitView && splitViewMode === 'dsl') {
-                    setIsSplitView(false)
-                  } else {
-                    setIsSplitView(true)
-                    setSplitViewMode('dsl')
-                  }
-                }}
-              >
-                <Code size={14} />
-                {isSplitView ? 'CLOSE CODE EDITOR' : 'OPEN CODE EDITOR'}
-              </button>
+                <button className="btn-new-table" onClick={handleAddTable}>
+                  <Plus size={14} />
+                  NEW TABLE
+                </button>
 
-              <div className="sidebar-menu" style={{ padding: 0, marginTop: '12px' }}>
-                <div
-                  className={`menu-item ${activeMenuTab === 'TABLES' ? 'active' : ''}`}
-                  onClick={() => setActiveMenuTab('TABLES')}
+                <button
+                  className="btn-new-table"
+                  style={{
+                    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+                    borderColor: 'var(--accent-blue)',
+                    color: 'var(--accent-blue)',
+                    marginTop: '4px'
+                  }}
+                  onClick={() => {
+                    if (isSplitView && splitViewMode === 'dsl') {
+                      setIsSplitView(false)
+                    } else {
+                      setIsSplitView(true)
+                      setSplitViewMode('dsl')
+                    }
+                  }}
                 >
-                  <Grid size={14} />
-                  TABLES ({filteredTables.length})
-                </div>
-                <div
-                  className={`menu-item ${activeMenuTab === 'RELATIONS' ? 'active' : ''}`}
-                  onClick={() => setActiveMenuTab('RELATIONS')}
-                >
-                  <Link2 size={14} />
-                  RELATIONS
-                </div>
-                <div
-                  className={`menu-item ${activeMenuTab === 'INDICES' ? 'active' : ''}`}
-                  onClick={() => setActiveMenuTab('INDICES')}
-                >
-                  <Key size={14} />
-                  INDICES
-                </div>
-              </div>
+                  <Code size={14} />
+                  {isSplitView ? 'CLOSE CODE EDITOR' : 'OPEN CODE EDITOR'}
+                </button>
 
-              {activeMenuTab === 'TABLES' && (
-                <div className="sidebar-content-area" style={{ maxHeight: '280px', overflowY: 'auto' }}>
-                  <span className="sidebar-list-title">Tablas ({filteredTables.length})</span>
-                  {filteredTables.map(t => (
-                    <div 
-                      key={t.id} 
-                      className={`sidebar-list-item ${selectedTableId === t.id ? 'selected' : ''}`}
-                      onClick={() => setSelectedTableId(t.id)}
-                    >
-                      <span className="sidebar-item-name">
-                        <Database size={12} style={{ color: 'var(--accent-blue)', marginRight: '6px' }} />
-                        {t.name}
-                      </span>
-                      <span className="sidebar-item-meta">{t.columns.length} cols</span>
-                    </div>
-                  ))}
+                <div className="sidebar-menu" style={{ padding: 0, marginTop: '12px' }}>
+                  <div
+                    className={`menu-item ${activeMenuTab === 'TABLES' ? 'active' : ''}`}
+                    onClick={() => setActiveMenuTab('TABLES')}
+                  >
+                    <Grid size={14} />
+                    TABLES ({filteredTables.length})
+                  </div>
+                  <div
+                    className={`menu-item ${activeMenuTab === 'RELATIONS' ? 'active' : ''}`}
+                    onClick={() => setActiveMenuTab('RELATIONS')}
+                  >
+                    <Link2 size={14} />
+                    RELATIONS
+                  </div>
+                  <div
+                    className={`menu-item ${activeMenuTab === 'INDICES' ? 'active' : ''}`}
+                    onClick={() => setActiveMenuTab('INDICES')}
+                  >
+                    <Key size={14} />
+                    INDICES
+                  </div>
                 </div>
-              )}
 
-              {activeMenuTab === 'RELATIONS' && (
-                <div className="sidebar-content-area" style={{ maxHeight: '280px', overflowY: 'auto' }}>
-                  <span className="sidebar-list-title">Relaciones ({relationLines.length})</span>
-                  {relationLines.map((line) => (
-                    <div key={line.id} className="sidebar-list-item" onClick={() => setSelectedTableId(line.targetTableId)}>
-                      <span className="sidebar-item-name" style={{ fontSize: '10px' }}>
-                        <Link2 size={12} style={{ color: 'var(--accent-green)', marginRight: '6px' }} />
-                        {line.id.replace('_to_', ' ➜ ').replace(/_[a-zA-Z0-9]+_/g, '.')}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeMenuTab === 'INDICES' && (
-                <div className="sidebar-content-area" style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <span className="sidebar-list-title">Índices ({customIndices.length})</span>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {customIndices.map(idx => (
-                      <div key={idx.id} className="sidebar-list-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                {activeMenuTab === 'TABLES' && (
+                  <div className="sidebar-content-area" style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                    <span className="sidebar-list-title">Tablas ({filteredTables.length})</span>
+                    {filteredTables.map(t => (
+                      <div
+                        key={t.id}
+                        className={`sidebar-list-item ${selectedTableId === t.id ? 'selected' : ''}`}
+                        onClick={() => setSelectedTableId(t.id)}
+                      >
                         <span className="sidebar-item-name">
-                          <Key size={12} style={{ color: 'var(--accent-purple)', marginRight: '6px' }} />
-                          {idx.name}
+                          <Database size={12} style={{ color: 'var(--accent-blue)', marginRight: '6px' }} />
+                          {t.name}
                         </span>
-                        <button
-                          onClick={() => {
-                            setCustomIndices(prev => prev.filter(i => i.id !== idx.id))
-                            showNotification("Índice eliminado")
-                          }}
-                          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '10px' }}
-                        >
-                          ✕
-                        </button>
+                        <span className="sidebar-item-meta">{t.columns.length} cols</span>
                       </div>
                     ))}
                   </div>
+                )}
 
-                  <div className="index-creator-form" style={{ marginTop: '12px', borderTop: '1px dashed #131924', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <span className="sidebar-list-title" style={{ fontSize: '10px' }}>NUEVO ÍNDICE</span>
-                    
-                    <select
-                      className="form-select"
-                      style={{ width: '100%', padding: '4px', fontSize: '11px', background: '#0d1117', border: '1px solid #1e293b', color: '#e2e8f0', borderRadius: '4px' }}
-                      value={selectedIndexTableId}
-                      onChange={(e) => {
-                        setSelectedIndexTableId(e.target.value)
-                        const tbl = tables.find(t => t.id === e.target.value)
-                        if (tbl && tbl.columns.length > 0) {
-                          setSelectedIndexColId(tbl.columns[0].id)
-                        }
-                      }}
-                    >
-                      <option value="">Selecciona Tabla...</option>
-                      {tables.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
-                    </select>
-
-                    {selectedIndexTableId && (() => {
-                      const tbl = tables.find(t => t.id === selectedIndexTableId)
-                      if (!tbl) return null
-                      return (
-                        <select
-                          className="form-select"
-                          style={{ width: '100%', padding: '4px', fontSize: '11px', background: '#0d1117', border: '1px solid #1e293b', color: '#e2e8f0', borderRadius: '4px' }}
-                          value={selectedIndexColId}
-                          onChange={(e) => setSelectedIndexColId(e.target.value)}
-                        >
-                          <option value="">Selecciona Columna...</option>
-                          {tbl.columns.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                      )
-                    })()}
-
-                    <button
-                      className="btn-new-table"
-                      style={{ width: '100%', padding: '6px', fontSize: '11px', marginTop: '4px' }}
-                      onClick={() => {
-                        const tbl = tables.find(t => t.id === selectedIndexTableId)
-                        const col = tbl?.columns.find(c => c.id === selectedIndexColId)
-                        if (tbl && col) {
-                          const idxName = `idx_${tbl.name.toLowerCase()}_${col.name.toLowerCase()}`
-                          if (customIndices.some(i => i.name === idxName)) {
-                            showNotification("El índice ya existe")
-                            return
-                          }
-                          setCustomIndices(prev => [
-                            ...prev,
-                            {
-                              id: `idx_${Date.now()}`,
-                              name: idxName,
-                              tableName: tbl.name.toLowerCase(),
-                              columnName: col.name.toLowerCase()
-                            }
-                          ])
-                          showNotification(`Índice ${idxName} creado!`)
-                          setSelectedIndexTableId('')
-                          setSelectedIndexColId('')
-                        } else {
-                          showNotification("Selecciona tabla y columna")
-                        }
-                      }}
-                    >
-                      Crear Índice
-                    </button>
+                {activeMenuTab === 'RELATIONS' && (
+                  <div className="sidebar-content-area" style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                    <span className="sidebar-list-title">Relaciones ({relationLines.length})</span>
+                    {relationLines.map((line) => (
+                      <div key={line.id} className="sidebar-list-item" onClick={() => setSelectedTableId(line.targetTableId)}>
+                        <span className="sidebar-item-name" style={{ fontSize: '10px' }}>
+                          <Link2 size={12} style={{ color: 'var(--accent-green)', marginRight: '6px' }} />
+                          {line.id.replace('_to_', ' ➜ ').replace(/_[a-zA-Z0-9]+_/g, '.')}
+                        </span>
+                      </div>
+                    ))}
                   </div>
+                )}
+
+                {activeMenuTab === 'INDICES' && (
+                  <div className="sidebar-content-area" style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <span className="sidebar-list-title">Índices ({customIndices.length})</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {customIndices.map(idx => (
+                        <div key={idx.id} className="sidebar-list-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="sidebar-item-name">
+                            <Key size={12} style={{ color: 'var(--accent-purple)', marginRight: '6px' }} />
+                            {idx.name}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setCustomIndices(prev => prev.filter(i => i.id !== idx.id))
+                              showNotification("Índice eliminado")
+                            }}
+                            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '10px' }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="index-creator-form" style={{ marginTop: '12px', borderTop: '1px dashed #131924', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <span className="sidebar-list-title" style={{ fontSize: '10px' }}>NUEVO ÍNDICE</span>
+
+                      <select
+                        className="form-select"
+                        style={{ width: '100%', padding: '4px', fontSize: '11px', background: '#0d1117', border: '1px solid #1e293b', color: '#e2e8f0', borderRadius: '4px' }}
+                        value={selectedIndexTableId}
+                        onChange={(e) => {
+                          setSelectedIndexTableId(e.target.value)
+                          const tbl = tables.find(t => t.id === e.target.value)
+                          if (tbl && tbl.columns.length > 0) {
+                            setSelectedIndexColId(tbl.columns[0].id)
+                          }
+                        }}
+                      >
+                        <option value="">Selecciona Tabla...</option>
+                        {tables.map(t => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+
+                      {selectedIndexTableId && (() => {
+                        const tbl = tables.find(t => t.id === selectedIndexTableId)
+                        if (!tbl) return null
+                        return (
+                          <select
+                            className="form-select"
+                            style={{ width: '100%', padding: '4px', fontSize: '11px', background: '#0d1117', border: '1px solid #1e293b', color: '#e2e8f0', borderRadius: '4px' }}
+                            value={selectedIndexColId}
+                            onChange={(e) => setSelectedIndexColId(e.target.value)}
+                          >
+                            <option value="">Selecciona Columna...</option>
+                            {tbl.columns.map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                        )
+                      })()}
+
+                      <button
+                        className="btn-new-table"
+                        style={{ width: '100%', padding: '6px', fontSize: '11px', marginTop: '4px' }}
+                        onClick={() => {
+                          const tbl = tables.find(t => t.id === selectedIndexTableId)
+                          const col = tbl?.columns.find(c => c.id === selectedIndexColId)
+                          if (tbl && col) {
+                            const idxName = `idx_${tbl.name.toLowerCase()}_${col.name.toLowerCase()}`
+                            if (customIndices.some(i => i.name === idxName)) {
+                              showNotification("El índice ya existe")
+                              return
+                            }
+                            setCustomIndices(prev => [
+                              ...prev,
+                              {
+                                id: `idx_${Date.now()}`,
+                                name: idxName,
+                                tableName: tbl.name.toLowerCase(),
+                                columnName: col.name.toLowerCase()
+                              }
+                            ])
+                            showNotification(`Índice ${idxName} creado!`)
+                            setSelectedIndexTableId('')
+                            setSelectedIndexColId('')
+                          } else {
+                            showNotification("Selecciona tabla y columna")
+                          }
+                        }}
+                      >
+                        Crear Índice
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="master-sidebar-footer" style={{ borderTop: '1px solid #131924' }}>
+                <div className="master-footer-item" onClick={() => showNotification('Opening documentation...')}>
+                  <FileText size={13} />
+                  <span>DOCS</span>
                 </div>
-              )}
+                <div className="master-footer-item" onClick={() => showNotification('Database Status: Connected')}>
+                  <Activity size={13} />
+                  <span>STATUS</span>
+                </div>
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="master-sidebar-logo-group">
+                <div className="master-logo-circle">
+                  <svg className="master-logo-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#38bdf8" strokeWidth="2.5">
+                    <path d="M12 12c-2-2.67-4-4-6-4A4 4 0 0 0 2 12a4 4 0 0 0 4 4c2 0 4-1.33 6-4Zm0 0c2-2.67 4-4 6-4a4 4 0 0 1 4 4 4 4 0 0 1-4 4c-2 0-4-1.33-6-4Z" />
+                  </svg>
+                </div>
+                <div className="master-logo-text-group">
+                  <span className="master-logo-text">DevSync</span>
+                  <span className="master-logo-sub">Production Environment</span>
+                </div>
+              </div>
 
-            <div className="master-sidebar-footer" style={{ borderTop: '1px solid #131924' }}>
-              <div className="master-footer-item" onClick={() => showNotification('Opening documentation...')}>
-                <FileText size={13} />
-                <span>DOCS</span>
-              </div>
-              <div className="master-footer-item" onClick={() => showNotification('Database Status: Connected')}>
-                <Activity size={13} />
-                <span>STATUS</span>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="master-sidebar-logo-group">
-              <div className="master-logo-circle">
-                <svg className="master-logo-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#38bdf8" strokeWidth="2.5">
-                  <path d="M12 12c-2-2.67-4-4-6-4A4 4 0 0 0 2 12a4 4 0 0 0 4 4c2 0 4-1.33 6-4Zm0 0c2-2.67 4-4 6-4a4 4 0 0 1 4 4 4 4 0 0 1-4 4c-2 0-4-1.33-6-4Z" />
-                </svg>
-              </div>
-              <div className="master-logo-text-group">
-                <span className="master-logo-text">DevSync</span>
-                <span className="master-logo-sub">Production Environment</span>
-              </div>
-            </div>
+              <nav className="master-sidebar-menu">
+                <div
+                  className={`master-menu-item ${activeMasterTab === 'home' ? 'active' : ''}`}
+                  onClick={() => setActiveMasterTab('home')}
+                >
+                  <Home size={16} />
+                  <span>Home</span>
+                </div>
+                <div
+                  className="master-menu-item"
+                  onClick={() => setActiveMasterTab('blueprint')}
+                >
+                  <Code size={16} style={{ transform: 'rotate(-45deg)' }} />
+                  <span>BluePrint</span>
+                </div>
+                <div
+                  className="master-menu-item"
+                  onClick={() => setActiveMasterTab('bandwidth')}
+                >
+                  <Users size={16} />
+                  <span>StackAgent</span>
+                </div>
+                <div
+                  className={`master-menu-item ${activeMasterTab === 'mergeguard' ? 'active' : ''}`}
+                  onClick={() => setActiveMasterTab('mergeguard')}
+                >
 
-            <nav className="master-sidebar-menu">
-              <div 
-                className={`master-menu-item ${activeMasterTab === 'home' ? 'active' : ''}`}
-                onClick={() => setActiveMasterTab('home')}
-              >
-                <Home size={16} />
-                <span>Home</span>
-              </div>
-              <div 
-                className="master-menu-item"
-                onClick={() => setActiveMasterTab('blueprint')}
-              >
-                <Code size={16} style={{ transform: 'rotate(-45deg)' }} />
-                <span>BluePrint</span>
-              </div>
-              <div 
-                className={`master-menu-item ${activeMasterTab === 'bandwidth' ? 'active' : ''}`}
-                onClick={() => setActiveMasterTab('bandwidth')}
-              >
-                <Activity size={16} />
-                <span>Bandwidth</span>
-              </div>
-              <div 
-                className={`master-menu-item ${activeMasterTab === 'mergeguard' ? 'active' : ''}`}
-                onClick={() => setActiveMasterTab('mergeguard')}
-              >
-                <GitBranch size={16} />
-                <span>MergeGuard</span>
-              </div>
-              <div 
-                className={`master-menu-item ${activeMasterTab === 'docify' ? 'active' : ''}`}
-                onClick={() => setActiveMasterTab('docify')}
-              >
-                <FileText size={16} />
-                <span>Docify</span>
-              </div>
-              <div 
-                className={`master-menu-item ${activeMasterTab === 'deeplint' ? 'active' : ''}`}
-                onClick={() => setActiveMasterTab('deeplint')}
-              >
-                <Sparkles size={16} />
-                <span>DeepLint</span>
-              </div>
-            </nav>
+                  <GitBranch size={16} />
+                  <span>MergeGuard</span>
+                </div>
+                <div
+                  className="master-menu-item"
+                  onClick={() => setActiveMasterTab('docify')}
+                >
+                  <FileText size={16} />
+                  <span>Docify</span>
+                </div>
+                <div
+                  className={`master-menu-item ${activeMasterTab === 'deeplint' ? 'active' : ''}`}
+                  onClick={() => setAuthScreen('deeplint')}
+                >
+                  <Sparkles size={16} />
+                  <span>DeepLint</span>
+                </div>
+              </nav>
 
-            <div className="master-sidebar-footer">
-              <div className="master-footer-item" onClick={() => showNotification('Configuración abierta')}>
-                <Settings size={14} />
-                <span>Configuración</span>
+              <div className="master-sidebar-footer">
+                <div className="master-footer-item" onClick={() => showNotification('Configuración abierta')}>
+                  <Settings size={14} />
+                  <span>Configuración</span>
+                </div>
+                <div className="master-footer-item" onClick={() => showNotification('Soporte')}>
+                  <HelpCircle size={14} />
+                  <span>Help</span>
+                </div>
               </div>
-              <div className="master-footer-item" onClick={() => showNotification('Soporte')}>
-                <HelpCircle size={14} />
-                <span>Help</span>
-              </div>
-            </div>
-          </>
-        )}
-      </aside>
+            </>
+          )}
+        </aside>
+      )}
+
 
       {/* Main Container Area */}
       <div className="master-main-container">
         {/* Top Search & Profile Header */}
-        <header className="master-top-header">
-          <div className="master-search-bar">
-            <Search size={14} className="search-icon" />
-            <input 
-              type="text" 
-              placeholder="Search projects, schemas, or docs..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          <div className="master-header-right">
-            <button className="icon-btn notification-bell" onClick={() => showNotification('No hay nuevas notificaciones')} title="Notifications">
-              <Bell size={16} />
-              <span className="bell-badge"></span>
-            </button>
-
-            <div className="master-user-profile" title="Ver Perfil" onClick={() => {
-              setActiveMasterTab('profile');
-            }}>
-              <div className="profile-info">
-                <span className="profile-name">{loggedInUserName}</span>
-                <span className="profile-role">Lead Engineer</span>
-              </div>
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80"
-                alt="Profile Avatar"
-                className="master-profile-avatar"
+        {activeMasterTab !== 'docify' && (
+          <header className="master-top-header">
+            <div className="master-search-bar">
+              <Search size={14} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search projects, schemas, or docs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-          </div>
-        </header>
+
+            <div className="master-header-right">
+              <button className="icon-btn notification-bell" onClick={() => showNotification('No hay nuevas notificaciones')} title="Notifications">
+                <Bell size={16} />
+                <span className="bell-badge"></span>
+              </button>
+
+              <div className="master-user-profile" title="Ver Perfil" onClick={() => {
+                setActiveMasterTab('profile');
+              }}>
+                <div className="profile-info">
+                  <span className="profile-name">{loggedInUserName}</span>
+                  <span className="profile-role">Lead Engineer</span>
+                </div>
+                <img
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80"
+                  alt="Profile Avatar"
+                  className="master-profile-avatar"
+                />
+              </div>
+            </div>
+          </header>
+        )}
 
         {/* Master Content Area switcher */}
         <main className="master-content-body">
           {activeMasterTab === 'home' && (
-            <DashboardHome 
+            <DashboardHome
               onNavigateToBlueprint={() => setActiveMasterTab('blueprint')}
               userName={loggedInUserName}
             />
@@ -1075,7 +1083,7 @@ export default function DatabaseDesigner({
 
           {activeMasterTab === 'blueprint' && (
             <div className="blueprint-designer-workspace-wrapper">
-              
+
               {/* Internal header for blueprint actions (Save, Export, Split View) */}
               <div className="blueprint-sub-header">
                 <div className="sub-header-left">
@@ -1088,9 +1096,9 @@ export default function DatabaseDesigner({
                   <button className="icon-btn" title="Project Settings" onClick={() => showNotification('Settings menu')}>
                     <Settings size={15} />
                   </button>
-                  <button 
-                    className="btn-secondary" 
-                    style={{ 
+                  <button
+                    className="btn-secondary"
+                    style={{
                       backgroundColor: (isSplitView && splitViewMode === 'export') ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
                       borderColor: (isSplitView && splitViewMode === 'export') ? 'var(--accent-blue)' : 'var(--border-color)',
                       color: (isSplitView && splitViewMode === 'export') ? 'var(--accent-blue)' : 'var(--text-primary)',
@@ -1113,8 +1121,8 @@ export default function DatabaseDesigner({
                   <button className="btn-secondary" onClick={() => showNotification('Project saved successfully!')}>
                     Save
                   </button>
-                  <button 
-                    className="btn-primary" 
+                  <button
+                    className="btn-primary"
                     style={{
                       backgroundColor: (isSplitView && splitViewMode === 'export') ? 'rgba(16, 185, 129, 0.2)' : undefined,
                       borderColor: (isSplitView && splitViewMode === 'export') ? '#10b981' : undefined,
@@ -1144,13 +1152,13 @@ export default function DatabaseDesigner({
                         <span className="macos-title">DataDraft DSL</span>
                       </div>
                       <div className="macos-actions">
-                        <button 
+                        <button
                           className="macos-action-btn active"
                           style={{ cursor: 'default' }}
                         >
                           DSL
                         </button>
-                        <button 
+                        <button
                           className="macos-action-btn"
                           onClick={() => copyToClipboard(importCode)}
                           title="Copy Shorthand Code"
@@ -1162,7 +1170,7 @@ export default function DatabaseDesigner({
 
                     <div className="split-textarea-wrapper" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', position: 'relative', height: 'calc(100% - 40px)' }}>
                       <div className="code-editor-container" style={{ position: 'relative', width: '100%', height: '100%', flexGrow: 1 }}>
-                        <pre 
+                        <pre
                           className="code-editor-highlight"
                           dangerouslySetInnerHTML={{ __html: highlightShorthand(importCode) }}
                         />
@@ -1189,7 +1197,7 @@ export default function DatabaseDesigner({
                     {/* Export Header */}
                     <div className="macos-header" style={{ userSelect: 'none' }}>
                       <div className="macos-left" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div 
+                        <div
                           onClick={() => setIsSplitView(false)}
                           style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444', cursor: 'pointer', transition: 'opacity 0.2s', position: 'relative' }}
                           title="Cerrar y volver al canvas"
@@ -1202,8 +1210,8 @@ export default function DatabaseDesigner({
                       <div className="macos-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <button className="macos-action-btn active" style={{ cursor: 'default' }}>Export</button>
                         <button className="macos-action-btn" onClick={() => { setSplitViewMode('dsl') }}>DSL</button>
-                        <button 
-                          className="macos-action-btn" 
+                        <button
+                          className="macos-action-btn"
                           onClick={() => setIsSplitView(false)}
                           style={{
                             background: 'rgba(239, 68, 68, 0.1)',
@@ -1462,395 +1470,395 @@ export default function DatabaseDesigner({
 
                 {!(isSplitView && splitViewMode === 'export') && (
                   <>
-                    <main 
+                    <main
                       className="canvas-grid"
                       ref={canvasRef}
                       onMouseDown={handleCanvasMouseDown}
                       onMouseMove={handleCanvasMouseMove}
                       onMouseUp={handleCanvasMouseUp}
                     >
-                  <div 
-                    className="canvas-content"
-                    style={{
-                      transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom / 100})`,
-                      transformOrigin: '0 0'
-                    }}
-                  >
-                    {/* SVG Connector lines */}
-                    <svg className="connections-svg" style={{ pointerEvents: 'none' }}>
-                      {relationLines.map((line) => (
-                        <path
-                          key={line.id}
-                          d={line.path}
-                          className={`connection-line ${selectedRelationId === line.id ? 'selected' : ''}`}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedRelationId(line.id)
-                            setSelectedTableId(null)
-                          }}
-                          style={{ pointerEvents: 'visibleStroke', cursor: 'pointer' }}
-                        />
-                      ))}
-
-                      {relationDragging && (() => {
-                        const sourceTable = tables.find(t => t.id === relationDragging.sourceTableId)
-                        if (!sourceTable) return null
-                        const colIdx = sourceTable.columns.findIndex(c => c.id === relationDragging.sourceColumnId)
-                        if (colIdx === -1) return null
-
-                        const rowHeight = 35
-                        const headerHeight = 38
-                        const sourceOnRight = sourceTable.x > relationDragging.currentX
-                        const xSource = sourceTable.x + (sourceOnRight ? 0 : 210)
-                        const ySource = sourceTable.y + headerHeight + colIdx * rowHeight + rowHeight / 2
-
-                        const xTarget = relationDragging.currentX
-                        const yTarget = relationDragging.currentY
-
-                        const offset = Math.abs(xSource - xTarget) / 2
-                        const cp1x = sourceOnRight ? xSource - offset : xSource + offset
-                        const cp2x = sourceOnRight ? xTarget + offset : xTarget - offset
-
-                        const path = `M ${xSource} ${ySource} C ${cp1x} ${ySource}, ${cp2x} ${yTarget}, ${xTarget} ${yTarget}`
-
-                        return (
-                          <path
-                            d={path}
-                            stroke="#10b981"
-                            strokeWidth="2"
-                            strokeDasharray="4 4"
-                            fill="none"
-                          />
-                        )
-                      })()}
-                    </svg>
-
-                    {/* Floating Relation Delete Buttons */}
-                    {relationLines.map((line) => {
-                      if (selectedRelationId !== line.id) return null
-                      return (
-                        <button
-                          key={`del_${line.id}`}
-                          className="delete-relation-btn"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteRelation(line.sourceTableId, line.sourceColumnId)
-                          }}
-                          style={{
-                            position: 'absolute',
-                            left: `${line.midX}px`,
-                            top: `${line.midY}px`,
-                            transform: 'translate(-50%, -50%)',
-                            backgroundColor: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '50%',
-                            width: '18px',
-                            height: '18px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            boxShadow: '0 0 6px #ef4444',
-                            zIndex: 100,
-                            fontSize: '10px',
-                            lineHeight: 1
-                          }}
-                          title="Delete Relation"
-                        >
-                          ✕
-                        </button>
-                      )
-                    })}
-
-                    {/* Table Cards */}
-                    {filteredTables.map((table) => (
                       <div
-                        key={table.id}
-                        className={`table-node ${selectedTableId === table.id ? 'selected' : ''}`}
+                        className="canvas-content"
                         style={{
-                          left: `${table.x}px`,
-                          top: `${table.y}px`
+                          transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom / 100})`,
+                          transformOrigin: '0 0'
                         }}
                       >
-                        <div
-                          className="table-node-header"
-                          onMouseDown={(e) => handleTableMouseDown(e, table.id)}
-                        >
-                          <Database size={12} className="header-icon" style={{ marginRight: '6px' }} />
-                          <span className="table-node-title">{table.name}</span>
-                          <button
-                            className="btn-delete-table"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteTable(table.id)
-                            }}
-                            title="Eliminar Tabla"
-                            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
-                          >
-                            <Trash2 size={11} />
-                          </button>
-                        </div>
-
-                        <div className="table-node-columns">
-                          {table.columns.map((col) => (
-                            <div
-                              key={col.id}
-                              className={`column-row ${col.isPrimaryKey ? 'primary-key-row' : ''} ${col.isForeignKey ? 'foreign-key-row' : ''}`}
-                              onMouseUp={(e) => {
-                                if (relationDragging) {
-                                  handleRelationDragEnd(e, table.id, col.id)
-                                }
+                        {/* SVG Connector lines */}
+                        <svg className="connections-svg" style={{ pointerEvents: 'none' }}>
+                          {relationLines.map((line) => (
+                            <path
+                              key={line.id}
+                              d={line.path}
+                              className={`connection-line ${selectedRelationId === line.id ? 'selected' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedRelationId(line.id)
+                                setSelectedTableId(null)
                               }}
-                            >
-                              <span className="col-name-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                {col.isPrimaryKey && <Key size={10} className="col-key-icon pk" style={{ color: '#f59e0b' }} />}
-                                {col.isForeignKey && <Link2 size={10} className="col-key-icon fk" style={{ color: '#10b981' }} />}
-                                <span className="col-name">{col.name}</span>
-                              </span>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span className="col-type" style={{ color: '#64748b', fontSize: '11px' }}>{col.type}</span>
-                                <div 
-                                  className="relation-drag-dot" 
-                                  title="Drag to link relation"
-                                  onMouseDown={(e) => handleRelationDragStart(e, table.id, col.id)}
-                                  style={{
-                                    width: '8px',
-                                    height: '8px',
-                                    borderRadius: '50%',
-                                    backgroundColor: '#10b981',
-                                    cursor: 'crosshair',
-                                    border: '1.5px solid #0d1117',
-                                    boxShadow: '0 0 4px #10b981'
-                                  }}
-                                />
-                              </div>
-                            </div>
+                              style={{ pointerEvents: 'visibleStroke', cursor: 'pointer' }}
+                            />
                           ))}
-                        </div>
+
+                          {relationDragging && (() => {
+                            const sourceTable = tables.find(t => t.id === relationDragging.sourceTableId)
+                            if (!sourceTable) return null
+                            const colIdx = sourceTable.columns.findIndex(c => c.id === relationDragging.sourceColumnId)
+                            if (colIdx === -1) return null
+
+                            const rowHeight = 35
+                            const headerHeight = 38
+                            const sourceOnRight = sourceTable.x > relationDragging.currentX
+                            const xSource = sourceTable.x + (sourceOnRight ? 0 : 210)
+                            const ySource = sourceTable.y + headerHeight + colIdx * rowHeight + rowHeight / 2
+
+                            const xTarget = relationDragging.currentX
+                            const yTarget = relationDragging.currentY
+
+                            const offset = Math.abs(xSource - xTarget) / 2
+                            const cp1x = sourceOnRight ? xSource - offset : xSource + offset
+                            const cp2x = sourceOnRight ? xTarget + offset : xTarget - offset
+
+                            const path = `M ${xSource} ${ySource} C ${cp1x} ${ySource}, ${cp2x} ${yTarget}, ${xTarget} ${yTarget}`
+
+                            return (
+                              <path
+                                d={path}
+                                stroke="#10b981"
+                                strokeWidth="2"
+                                strokeDasharray="4 4"
+                                fill="none"
+                              />
+                            )
+                          })()}
+                        </svg>
+
+                        {/* Floating Relation Delete Buttons */}
+                        {relationLines.map((line) => {
+                          if (selectedRelationId !== line.id) return null
+                          return (
+                            <button
+                              key={`del_${line.id}`}
+                              className="delete-relation-btn"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteRelation(line.sourceTableId, line.sourceColumnId)
+                              }}
+                              style={{
+                                position: 'absolute',
+                                left: `${line.midX}px`,
+                                top: `${line.midY}px`,
+                                transform: 'translate(-50%, -50%)',
+                                backgroundColor: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '18px',
+                                height: '18px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                boxShadow: '0 0 6px #ef4444',
+                                zIndex: 100,
+                                fontSize: '10px',
+                                lineHeight: 1
+                              }}
+                              title="Delete Relation"
+                            >
+                              ✕
+                            </button>
+                          )
+                        })}
+
+                        {/* Table Cards */}
+                        {filteredTables.map((table) => (
+                          <div
+                            key={table.id}
+                            className={`table-node ${selectedTableId === table.id ? 'selected' : ''}`}
+                            style={{
+                              left: `${table.x}px`,
+                              top: `${table.y}px`
+                            }}
+                          >
+                            <div
+                              className="table-node-header"
+                              onMouseDown={(e) => handleTableMouseDown(e, table.id)}
+                            >
+                              <Database size={12} className="header-icon" style={{ marginRight: '6px' }} />
+                              <span className="table-node-title">{table.name}</span>
+                              <button
+                                className="btn-delete-table"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeleteTable(table.id)
+                                }}
+                                title="Eliminar Tabla"
+                                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+
+                            <div className="table-node-columns">
+                              {table.columns.map((col) => (
+                                <div
+                                  key={col.id}
+                                  className={`column-row ${col.isPrimaryKey ? 'primary-key-row' : ''} ${col.isForeignKey ? 'foreign-key-row' : ''}`}
+                                  onMouseUp={(e) => {
+                                    if (relationDragging) {
+                                      handleRelationDragEnd(e, table.id, col.id)
+                                    }
+                                  }}
+                                >
+                                  <span className="col-name-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    {col.isPrimaryKey && <Key size={10} className="col-key-icon pk" style={{ color: '#f59e0b' }} />}
+                                    {col.isForeignKey && <Link2 size={10} className="col-key-icon fk" style={{ color: '#10b981' }} />}
+                                    <span className="col-name">{col.name}</span>
+                                  </span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span className="col-type" style={{ color: '#64748b', fontSize: '11px' }}>{col.type}</span>
+                                    <div
+                                      className="relation-drag-dot"
+                                      title="Drag to link relation"
+                                      onMouseDown={(e) => handleRelationDragStart(e, table.id, col.id)}
+                                      style={{
+                                        width: '8px',
+                                        height: '8px',
+                                        borderRadius: '50%',
+                                        backgroundColor: '#10b981',
+                                        cursor: 'crosshair',
+                                        border: '1.5px solid #0d1117',
+                                        boxShadow: '0 0 4px #10b981'
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
 
-                  <div className="canvas-controls">
-                    <button className="icon-btn" onClick={() => showNotification('Search canvas location')} title="Search Position">
-                      <Search size={13} />
-                    </button>
-                    <div className="control-separator" />
-                    <button className="icon-btn" onClick={zoomOut} title="Zoom Out">
-                      <Minimize2 size={13} />
-                    </button>
-                    <span className="zoom-text" onClick={resetZoom} style={{ cursor: 'pointer' }}>
-                      {zoom}%
-                    </span>
-                    <button className="icon-btn" onClick={zoomIn} title="Zoom In">
-                      <Maximize2 size={13} />
-                    </button>
-                    <div className="control-separator" />
-                    <button className="icon-btn" onClick={() => { setPanOffset({ x: 0, y: 0 }); resetZoom(); }} title="Recenter Canvas">
-                      <HelpCircle size={13} />
-                    </button>
-                    <button className="icon-btn" onClick={() => showNotification('Grid snapping enabled!')} title="Grid layout toggled">
-                      <Grid size={13} />
-                    </button>
-                  </div>
-                </main>
-
-                {/* Right side Properties Panel */}
-                <aside className={`right-panel ${isPropertiesCollapsed ? 'collapsed' : ''}`}>
-                  <div 
-                    className="properties-toggle-btn"
-                    onClick={() => setIsPropertiesCollapsed(!isPropertiesCollapsed)}
-                    title={isPropertiesCollapsed ? 'Expandir Propiedades' : 'Colapsar Propiedades'}
-                  >
-                    {isPropertiesCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
-                  </div>
-                  {selectedTable ? (
-                    <>
-                      <div className="panel-header">
-                        <h2>Table Properties</h2>
-                        <button className="icon-btn" onClick={() => setSelectedTableId(null)}>
-                          <X size={15} />
+                      <div className="canvas-controls">
+                        <button className="icon-btn" onClick={() => showNotification('Search canvas location')} title="Search Position">
+                          <Search size={13} />
+                        </button>
+                        <div className="control-separator" />
+                        <button className="icon-btn" onClick={zoomOut} title="Zoom Out">
+                          <Minimize2 size={13} />
+                        </button>
+                        <span className="zoom-text" onClick={resetZoom} style={{ cursor: 'pointer' }}>
+                          {zoom}%
+                        </span>
+                        <button className="icon-btn" onClick={zoomIn} title="Zoom In">
+                          <Maximize2 size={13} />
+                        </button>
+                        <div className="control-separator" />
+                        <button className="icon-btn" onClick={() => { setPanOffset({ x: 0, y: 0 }); resetZoom(); }} title="Recenter Canvas">
+                          <HelpCircle size={13} />
+                        </button>
+                        <button className="icon-btn" onClick={() => showNotification('Grid snapping enabled!')} title="Grid layout toggled">
+                          <Grid size={13} />
                         </button>
                       </div>
+                    </main>
 
-                      <div className="panel-body">
-                        <div className="form-group">
-                          <label className="form-label">Table Name</label>
-                          <input
-                            type="text"
-                            className="form-input"
-                            value={selectedTable.name}
-                            onChange={(e) => handleUpdateTableMeta({ name: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <label className="form-label">Table Comment</label>
-                          <textarea
-                            className="form-textarea"
-                            value={selectedTable.comment}
-                            onChange={(e) => handleUpdateTableMeta({ comment: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="form-group">
-                          <div className="section-title-row">
-                            <label className="form-label">Columns ({selectedTable.columns.length})</label>
-                            <button className="btn-link-add" onClick={handleAddColumn}>
-                              <Plus size={11} />
-                              Add
+                    {/* Right side Properties Panel */}
+                    <aside className={`right-panel ${isPropertiesCollapsed ? 'collapsed' : ''}`}>
+                      <div
+                        className="properties-toggle-btn"
+                        onClick={() => setIsPropertiesCollapsed(!isPropertiesCollapsed)}
+                        title={isPropertiesCollapsed ? 'Expandir Propiedades' : 'Colapsar Propiedades'}
+                      >
+                        {isPropertiesCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
+                      </div>
+                      {selectedTable ? (
+                        <>
+                          <div className="panel-header">
+                            <h2>Table Properties</h2>
+                            <button className="icon-btn" onClick={() => setSelectedTableId(null)}>
+                              <X size={15} />
                             </button>
                           </div>
 
-                          <div className="columns-edit-list">
-                            {selectedTable.columns.map((col) => (
-                              <div key={col.id} className="column-edit-item">
-                                <div className="column-edit-main">
-                                  <input
-                                    type="text"
-                                    className="form-input"
-                                    style={{ padding: '4px 8px', fontSize: '12px' }}
-                                    value={col.name}
-                                    onChange={(e) => handleUpdateColumn(col.id, { name: e.target.value })}
-                                  />
-                                  <select
-                                    className="form-select"
-                                    value={col.type}
-                                    onChange={(e) => handleUpdateColumn(col.id, { type: e.target.value })}
-                                  >
-                                    {columnTypes.map((t) => (
-                                      <option key={t} value={t}>
-                                        {t}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <button
-                                    className="column-edit-delete"
-                                    onClick={() => handleDeleteColumn(col.id)}
-                                    title="Delete Column"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
+                          <div className="panel-body">
+                            <div className="form-group">
+                              <label className="form-label">Table Name</label>
+                              <input
+                                type="text"
+                                className="form-input"
+                                value={selectedTable.name}
+                                onChange={(e) => handleUpdateTableMeta({ name: e.target.value })}
+                              />
+                            </div>
 
-                                <div className="column-edit-checkboxes">
-                                  <label className="checkbox-label">
-                                    <input
-                                      type="checkbox"
-                                      checked={col.isPrimaryKey}
-                                      onChange={(e) =>
-                                        handleUpdateColumn(col.id, {
-                                          isPrimaryKey: e.target.checked,
-                                          isForeignKey: e.target.checked ? false : col.isForeignKey
-                                        })
-                                      }
-                                    />
-                                    PK
-                                  </label>
+                            <div className="form-group">
+                              <label className="form-label">Table Comment</label>
+                              <textarea
+                                className="form-textarea"
+                                value={selectedTable.comment}
+                                onChange={(e) => handleUpdateTableMeta({ comment: e.target.value })}
+                              />
+                            </div>
 
-                                  <label className="checkbox-label">
-                                    <input
-                                      type="checkbox"
-                                      checked={col.isForeignKey}
-                                      onChange={(e) =>
-                                        handleUpdateColumn(col.id, {
-                                          isForeignKey: e.target.checked,
-                                          isPrimaryKey: e.target.checked ? false : col.isPrimaryKey,
-                                          foreignKeyTargetTableId: e.target.checked
-                                            ? tables.find((t) => t.id !== selectedTable.id)?.id || ''
-                                            : undefined,
-                                          foreignKeyTargetColumnId: e.target.checked
-                                            ? tables.find((t) => t.id !== selectedTable.id)?.columns[0]?.id || ''
-                                            : undefined
-                                        })
-                                      }
-                                    />
-                                    FK
-                                  </label>
+                            <div className="form-group">
+                              <div className="section-title-row">
+                                <label className="form-label">Columns ({selectedTable.columns.length})</label>
+                                <button className="btn-link-add" onClick={handleAddColumn}>
+                                  <Plus size={11} />
+                                  Add
+                                </button>
+                              </div>
 
-                                  {col.isForeignKey && (
-                                    <select
-                                      className="form-select"
-                                      style={{ padding: '2px 4px', fontSize: '10px' }}
-                                      value={col.foreignKeyTargetTableId}
-                                      onChange={(e) => {
-                                        const targetTabId = e.target.value
-                                        const targetTableObj = tables.find((t) => t.id === targetTabId)
-                                        handleUpdateColumn(col.id, {
-                                          foreignKeyTargetTableId: targetTabId,
-                                          foreignKeyTargetColumnId: targetTableObj?.columns[0]?.id || ''
-                                        })
-                                      }}
-                                    >
-                                      {tables
-                                        .filter((t) => t.id !== selectedTable.id)
-                                        .map((t) => (
-                                          <option key={t.id} value={t.id}>
-                                            {t.name}
+                              <div className="columns-edit-list">
+                                {selectedTable.columns.map((col) => (
+                                  <div key={col.id} className="column-edit-item">
+                                    <div className="column-edit-main">
+                                      <input
+                                        type="text"
+                                        className="form-input"
+                                        style={{ padding: '4px 8px', fontSize: '12px' }}
+                                        value={col.name}
+                                        onChange={(e) => handleUpdateColumn(col.id, { name: e.target.value })}
+                                      />
+                                      <select
+                                        className="form-select"
+                                        value={col.type}
+                                        onChange={(e) => handleUpdateColumn(col.id, { type: e.target.value })}
+                                      >
+                                        {columnTypes.map((t) => (
+                                          <option key={t} value={t}>
+                                            {t}
                                           </option>
                                         ))}
-                                    </select>
-                                  )}
-                                </div>
+                                      </select>
+                                      <button
+                                        className="column-edit-delete"
+                                        onClick={() => handleDeleteColumn(col.id)}
+                                        title="Delete Column"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
+
+                                    <div className="column-edit-checkboxes">
+                                      <label className="checkbox-label">
+                                        <input
+                                          type="checkbox"
+                                          checked={col.isPrimaryKey}
+                                          onChange={(e) =>
+                                            handleUpdateColumn(col.id, {
+                                              isPrimaryKey: e.target.checked,
+                                              isForeignKey: e.target.checked ? false : col.isForeignKey
+                                            })
+                                          }
+                                        />
+                                        PK
+                                      </label>
+
+                                      <label className="checkbox-label">
+                                        <input
+                                          type="checkbox"
+                                          checked={col.isForeignKey}
+                                          onChange={(e) =>
+                                            handleUpdateColumn(col.id, {
+                                              isForeignKey: e.target.checked,
+                                              isPrimaryKey: e.target.checked ? false : col.isPrimaryKey,
+                                              foreignKeyTargetTableId: e.target.checked
+                                                ? tables.find((t) => t.id !== selectedTable.id)?.id || ''
+                                                : undefined,
+                                              foreignKeyTargetColumnId: e.target.checked
+                                                ? tables.find((t) => t.id !== selectedTable.id)?.columns[0]?.id || ''
+                                                : undefined
+                                            })
+                                          }
+                                        />
+                                        FK
+                                      </label>
+
+                                      {col.isForeignKey && (
+                                        <select
+                                          className="form-select"
+                                          style={{ padding: '2px 4px', fontSize: '10px' }}
+                                          value={col.foreignKeyTargetTableId}
+                                          onChange={(e) => {
+                                            const targetTabId = e.target.value
+                                            const targetTableObj = tables.find((t) => t.id === targetTabId)
+                                            handleUpdateColumn(col.id, {
+                                              foreignKeyTargetTableId: targetTabId,
+                                              foreignKeyTargetColumnId: targetTableObj?.columns[0]?.id || ''
+                                            })
+                                          }}
+                                        >
+                                          {tables
+                                            .filter((t) => t.id !== selectedTable.id)
+                                            .map((t) => (
+                                              <option key={t.id} value={t.id}>
+                                                {t.name}
+                                              </option>
+                                            ))}
+                                        </select>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        </div>
+                            </div>
 
-                        <div className="form-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-                          <label className="form-label">Engine Settings</label>
-                          <div className="toggle-row">
-                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Audit Logging</span>
-                            <label className="switch">
-                              <input
-                                type="checkbox"
-                                checked={auditLogging}
-                                onChange={(e) => setAuditLogging(e.target.checked)}
-                              />
-                              <span className="slider" />
-                            </label>
-                          </div>
-                        </div>
+                            <div className="form-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                              <label className="form-label">Engine Settings</label>
+                              <div className="toggle-row">
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Audit Logging</span>
+                                <label className="switch">
+                                  <input
+                                    type="checkbox"
+                                    checked={auditLogging}
+                                    onChange={(e) => setAuditLogging(e.target.checked)}
+                                  />
+                                  <span className="slider" />
+                                </label>
+                              </div>
+                            </div>
 
-                        <div className="sql-preview-container">
-                          <div className="sql-header">
-                            <span className="form-label">SQL Preview</span>
-                            <button
-                              className="icon-btn"
-                              onClick={() => copyToClipboard(generateSQL(selectedTable))}
-                              title="Copy SQL"
-                            >
-                              {copied ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
-                            </button>
+                            <div className="sql-preview-container">
+                              <div className="sql-header">
+                                <span className="form-label">SQL Preview</span>
+                                <button
+                                  className="icon-btn"
+                                  onClick={() => copyToClipboard(generateSQL(selectedTable))}
+                                  title="Copy SQL"
+                                >
+                                  {copied ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
+                                </button>
+                              </div>
+                              <pre className="sql-box">
+                                <span className="sql-keyword">CREATE TABLE</span> <span className="sql-string">"{selectedTable.name}"</span> ({"\n"}
+                                {selectedTable.columns.map((c, idx) => {
+                                  let typeStr = c.type
+                                  if (c.type === 'String') typeStr = 'UUID'
+                                  if (c.type === 'Decimal') typeStr = 'DECIMAL(10,2)'
+                                  const isLast = idx === selectedTable.columns.length - 1
+                                  return (
+                                    <span key={c.id}>
+                                      {"  "}<span className="sql-string">"{c.name}"</span> <span className="sql-type">{typeStr.toUpperCase()}</span>
+                                      {c.isPrimaryKey && <span className="sql-keyword"> PRIMARY KEY</span>}
+                                      {!isLast && ","}{"\n"}
+                                    </span>
+                                  )
+                                })}
+                                );
+                              </pre>
+                            </div>
                           </div>
-                          <pre className="sql-box">
-                            <span className="sql-keyword">CREATE TABLE</span> <span className="sql-string">"{selectedTable.name}"</span> ({"\n"}
-                            {selectedTable.columns.map((c, idx) => {
-                              let typeStr = c.type
-                              if (c.type === 'String') typeStr = 'UUID'
-                              if (c.type === 'Decimal') typeStr = 'DECIMAL(10,2)'
-                              const isLast = idx === selectedTable.columns.length - 1
-                              return (
-                                <span key={c.id}>
-                                  {"  "}<span className="sql-string">"{c.name}"</span> <span className="sql-type">{typeStr.toUpperCase()}</span>
-                                  {c.isPrimaryKey && <span className="sql-keyword"> PRIMARY KEY</span>}
-                                  {!isLast && ","}{"\n"}
-                                </span>
-                              )
-                            })}
-                            );
-                          </pre>
+                        </>
+                      ) : (
+                        <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          <h3>No Table Selected</h3>
+                          <p style={{ fontSize: '12px' }}>Click a table in the canvas to inspect its properties.</p>
                         </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                      <h3>No Table Selected</h3>
-                      <p style={{ fontSize: '12px' }}>Click a table in the canvas to inspect its properties.</p>
-                    </div>
-                  )}
-                </aside>
+                      )}
+                    </aside>
                   </>
                 )}
               </div>
@@ -1858,11 +1866,15 @@ export default function DatabaseDesigner({
             </div>
           )}
 
-          {activeMasterTab !== 'home' && activeMasterTab !== 'blueprint' && activeMasterTab !== 'profile' && activeMasterTab !== 'docify' && activeMasterTab !== 'mergeguard' && (
+          {activeMasterTab !== 'home' && activeMasterTab !== 'blueprint' && activeMasterTab !== 'profile' && activeMasterTab !== 'docify' && activeMasterTab !== 'mergeguard' && activeMasterTab !== 'bandwidth' && (
             <div className="placeholder-tab-content" style={{ padding: '40px', color: 'var(--text-muted)', textAlign: 'center' }}>
               <h2>{activeMasterTab.toUpperCase()} Module</h2>
               <p style={{ fontSize: '14px', marginTop: '8px' }}>This component is fully active and synchronized with production environment.</p>
             </div>
+          )}
+
+          {activeMasterTab === 'bandwidth' && (
+            <StackAgent onBack={() => setActiveMasterTab('home')} />
           )}
 
           {activeMasterTab === 'mergeguard' && (
@@ -1870,7 +1882,11 @@ export default function DatabaseDesigner({
           )}
 
           {activeMasterTab === 'docify' && (
-            <DocifyView tables={tables} showNotification={showNotification} />
+            <DocifyView
+              tables={tables}
+              showNotification={showNotification}
+              onBack={() => setActiveMasterTab('home')}
+            />
           )}
 
           {activeMasterTab === 'profile' && (
