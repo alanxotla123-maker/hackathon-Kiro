@@ -2,10 +2,83 @@ import { Router } from "express";
 import { OpenAI } from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import prisma from "../../db.js";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { resolve, join, extname, relative } from "node:path";
 
 const router = Router();
+
+// ─── Helper: recursive file walker (zero dependencies) ──────────────
+const ALLOWED_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".css"]);
+const IGNORED_DIRS = new Set(["node_modules", "dist", ".git", ".next", "build", "coverage"]);
+
+interface ScannedFile {
+  filepath: string;
+  content: string;
+}
+
+function walkDir(dir: string, rootDir: string): ScannedFile[] {
+  const results: ScannedFile[] = [];
+
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return results;
+  }
+
+  for (const entry of entries) {
+    if (IGNORED_DIRS.has(entry)) continue;
+
+    const fullPath = join(dir, entry);
+    let stat;
+    try {
+      stat = statSync(fullPath);
+    } catch {
+      continue;
+    }
+
+    if (stat.isDirectory()) {
+      results.push(...walkDir(fullPath, rootDir));
+    } else if (stat.isFile() && ALLOWED_EXTENSIONS.has(extname(entry))) {
+      try {
+        const content = readFileSync(fullPath, "utf-8");
+        results.push({
+          filepath: relative(rootDir, fullPath).replace(/\\/g, "/"),
+          content,
+        });
+      } catch {
+        // Skip unreadable files
+      }
+    }
+  }
+  return results;
+}
+
+// ─── Day-2: GET /scan ───────────────────────────────────────────────
+// Recursively scans back-end/src and front-end/src, returns all source files.
+router.get("/scan", (_req, res) => {
+  try {
+    // Project root is 4 levels up from this file:
+    // back-end/src/modules/doc-generator/ → project root
+    const projectRoot = resolve(__dirname, "..", "..", "..", "..");
+
+    const backendSrc = join(projectRoot, "back-end", "src");
+    const frontendSrc = join(projectRoot, "front-end", "src");
+
+    const files: ScannedFile[] = [
+      ...walkDir(backendSrc, projectRoot),
+      ...walkDir(frontendSrc, projectRoot),
+    ];
+
+    res.json({
+      totalFiles: files.length,
+      files,
+    });
+  } catch (err: any) {
+    console.error("[doc-generator/scan]", err);
+    res.status(500).json({ error: err.message || "Error escaneando directorios." });
+  }
+});
 
 // ─── POC Day-1: GET /generate ───────────────────────────────────────
 // Lee un archivo .ts local y devuelve su contenido crudo.
