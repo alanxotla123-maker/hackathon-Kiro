@@ -2,8 +2,26 @@ import { Router } from "express";
 import { OpenAI } from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import prisma from "../../db.js";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const router = Router();
+
+// ─── POC Day-1: GET /generate ───────────────────────────────────────
+// Lee un archivo .ts local y devuelve su contenido crudo.
+// Funciona sin Prisma ni API keys – perfecto para probar el frontend.
+router.get("/generate", (_req, res) => {
+  try {
+    // __dirname is available because the backend runs in CJS mode (tsx)
+    const targetFile = resolve(__dirname, "docGeneratorRouter.ts");
+
+    const content = readFileSync(targetFile, "utf-8");
+    res.json({ filename: "docGeneratorRouter.ts", content });
+  } catch (err: any) {
+    console.error("[doc-generator/generate]", err);
+    res.status(500).json({ error: err.message || "Error leyendo archivo." });
+  }
+});
 
 // POST trigger document generation
 router.post("/generate", async (req, res) => {
