@@ -818,7 +818,7 @@ export default function DatabaseDesigner({
     <div className="devsync-dashboard-wrapper">
       {/* Master Left Navigation Sidebar */}
       {activeMasterTab !== 'docify' && activeMasterTab !== 'bandwidth' && (
-        <aside className="master-left-sidebar">
+        <aside className="master-left-sidebar" style={{ width: (isSplitView && splitViewMode === 'dsl') ? '320px' : '240px', transition: 'width 0.2s ease' }}>
           {activeMasterTab === 'blueprint' ? (
             <div className="left-sidebar" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: 'transparent', borderRight: 'none' }}>
               <div className="master-sidebar-logo-group" style={{ cursor: 'pointer', borderBottom: '1px solid #131924' }} onClick={() => setActiveMasterTab('home')}>
@@ -840,11 +840,12 @@ export default function DatabaseDesigner({
                   </div>
                 </div>
 
-                <button className="btn-new-table" onClick={handleAddTable}>
-                  <Plus size={14} />
-                  NEW TABLE
-                </button>
-
+                {!isSplitView && (
+                  <button className="btn-new-table" onClick={handleAddTable}>
+                    <Plus size={14} />
+                    NEW TABLE
+                  </button>
+                )}
                 <button
                   className="btn-new-table"
                   style={{
@@ -866,8 +867,141 @@ export default function DatabaseDesigner({
                   {isSplitView ? 'CLOSE CODE EDITOR' : 'OPEN CODE EDITOR'}
                 </button>
 
-                <div className="sidebar-menu" style={{ padding: 0, marginTop: '12px' }}>
-                  <div
+                {isSplitView && splitViewMode === 'dsl' && (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', marginTop: '12px', borderTop: '1px solid #131924', paddingTop: '12px' }}>
+                    <div className="macos-header" style={{ background: 'transparent', borderBottom: 'none', height: 'auto', minHeight: 'auto', padding: '0 0 8px 0' }}>
+                      <div className="macos-left">
+                        <span className="macos-title" style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>DataDraft DSL</span>
+                      </div>
+                      <div className="macos-actions">
+                        <button className="macos-action-btn" onClick={() => copyToClipboard(importCode)} title="Copy Shorthand Code">Copy</button>
+                      </div>
+                    </div>
+
+                    <div className="split-textarea-wrapper" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                      <div className="code-editor-container" style={{ position: 'relative', width: '100%', height: '100%', flexGrow: 1 }}>
+                        <pre
+                          className="code-editor-highlight"
+                          dangerouslySetInnerHTML={{ __html: highlightShorthand(importCode) }}
+                        />
+                        <textarea
+                          className="code-editor-textarea"
+                          value={importCode}
+                          onChange={(e) => setImportCode(e.target.value)}
+                          spellCheck="false"
+                        />
+                      </div>
+                    </div>
+
+                    {importError && showToast && (
+                      <div className="toast-bar-bottom" style={{ margin: '8px 0 0 0', padding: '6px 12px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#f87171' }}>
+                        <span>⚠️ {importError}</span>
+                        <button style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }} onClick={() => setShowToast(false)}>Dismiss</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {isSplitView && splitViewMode === 'export' && (
+                  <div style={{ flex: 1, borderTop: '1px solid #131924', display: 'flex', flexDirection: 'column', paddingTop: '16px', gap: '16px', overflowY: 'auto' }}>
+                    <div>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>Target Database</span>
+                      {['PostgreSQL', 'MySQL', 'SQLite', 'MongoDB', 'Prisma ORM'].map(db => (
+                        <div
+                          key={db}
+                          onClick={() => setTargetDb(db)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 10px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            marginBottom: '2px',
+                            fontSize: '12px',
+                            fontWeight: targetDb === db ? 600 : 400,
+                            color: targetDb === db ? '#38bdf8' : '#94a3b8',
+                            background: targetDb === db ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
+                            border: targetDb === db ? '1px solid rgba(56, 189, 248, 0.2)' : '1px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Database size={13} />
+                          {db}
+                          {targetDb === db && db === 'PostgreSQL' && (
+                            <span style={{ marginLeft: 'auto', fontSize: '9px', padding: '1px 5px', borderRadius: '3px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>v15</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div style={{ borderTop: '1px solid #131924', paddingTop: '16px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', marginBottom: '12px', display: 'block' }}>Export Settings</span>
+
+                      <div style={{ marginBottom: '12px' }}>
+                        <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500, marginBottom: '4px', display: 'block', textTransform: 'uppercase' }}>Schema Name</label>
+                        <input
+                          type="text"
+                          value={schemaName}
+                          onChange={(e) => setSchemaName(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '6px 10px',
+                            background: '#0d1117',
+                            border: '1px solid #1e293b',
+                            borderRadius: '4px',
+                            color: '#e2e8f0',
+                            fontSize: '12px',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+
+                      {[
+                        { label: 'Include DROP statements', checked: includeDrop, onChange: setIncludeDrop },
+                        { label: 'Generate relationships (FK)', checked: generateFK, onChange: setGenerateFK },
+                        { label: 'Include seed data', checked: includeSeed, onChange: setIncludeSeed },
+                      ].map((setting) => (
+                        <label
+                          key={setting.label}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '6px 0',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            color: '#cbd5e1'
+                          }}
+                        >
+                          <div
+                            onClick={() => setting.onChange(!setting.checked)}
+                            style={{
+                              width: '16px',
+                              height: '16px',
+                              borderRadius: '4px',
+                              border: setting.checked ? '2px solid #38bdf8' : '2px solid #475569',
+                              background: setting.checked ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.15s ease',
+                              flexShrink: 0
+                            }}
+                          >
+                            {setting.checked && <Check size={10} style={{ color: '#38bdf8' }} />}
+                          </div>
+                          {setting.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {!isSplitView && (
+                  <>
+                    <div className="sidebar-menu" style={{ padding: 0, marginTop: '12px' }}>                  <div
                     className={`menu-item ${activeMenuTab === 'TABLES' ? 'active' : ''}`}
                     onClick={() => setActiveMenuTab('TABLES')}
                   >
@@ -1019,18 +1153,22 @@ export default function DatabaseDesigner({
                     </div>
                   </div>
                 )}
+                  </>
+                )}
               </div>
 
-              <div className="master-sidebar-footer" style={{ borderTop: '1px solid #131924' }}>
-                <div className="master-footer-item" onClick={() => showNotification('Opening documentation...')}>
-                  <FileText size={13} />
-                  <span>DOCS</span>
+              {!isSplitView && (
+                <div className="master-sidebar-footer" style={{ borderTop: '1px solid #131924' }}>
+                  <div className="master-footer-item" onClick={() => showNotification('Opening documentation...')}>
+                    <FileText size={13} />
+                    <span>DOCS</span>
+                  </div>
+                  <div className="master-footer-item" onClick={() => showNotification('Database Status: Connected')}>
+                    <Activity size={13} />
+                    <span>STATUS</span>
+                  </div>
                 </div>
-                <div className="master-footer-item" onClick={() => showNotification('Database Status: Connected')}>
-                  <Activity size={13} />
-                  <span>STATUS</span>
-                </div>
-              </div>
+              )}
             </div>
           ) : (
             <>
@@ -1152,6 +1290,8 @@ export default function DatabaseDesigner({
             <DashboardHome
               onNavigateToBlueprint={() => setActiveMasterTab('blueprint')}
               userName={loggedInUserName}
+              tables={tables}
+              savedSchemas={savedSchemas}
             />
           )}
 
@@ -1164,12 +1304,7 @@ export default function DatabaseDesigner({
                   <span className="workspace-title-label">Database Blueprint / visual-schema</span>
                 </div>
                 <div className="sub-header-right">
-                  <button className="icon-btn" title="Share Project" onClick={() => showNotification('Sharing link copied!')}>
-                    <Share2 size={15} />
-                  </button>
-                  <button className="icon-btn" title="Project Settings" onClick={() => showNotification('Settings menu')}>
-                    <Settings size={15} />
-                  </button>
+
                   <button
                     className="btn-secondary"
                     style={{
@@ -1196,24 +1331,31 @@ export default function DatabaseDesigner({
                     <Save size={13} />
                     Save
                   </button>
-                  <button
-                    className="btn-primary"
-                    style={{
-                      backgroundColor: (isSplitView && splitViewMode === 'export') ? 'rgba(16, 185, 129, 0.2)' : undefined,
-                      borderColor: (isSplitView && splitViewMode === 'export') ? '#10b981' : undefined,
-                    }}
-                    onClick={() => {
-                      if (isSplitView && splitViewMode === 'export') {
-                        setIsSplitView(false)
-                      } else {
-                        setIsSplitView(true)
-                        setSplitViewMode('export')
-                      }
-                    }}
-                  >
-                    <Download size={14} />
-                    Export
-                  </button>
+
+                  {isSplitView && splitViewMode === 'export' && (
+                    <>
+                      <div style={{ width: '1px', height: '20px', background: 'var(--border-color)', margin: '0 4px' }} />
+                      <button
+                        onClick={() => copyToClipboard(generateExportSQL())}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '6px 12px',
+                          background: 'rgba(148, 163, 184, 0.08)',
+                          border: '1px solid #334155',
+                          borderRadius: '4px',
+                          color: '#94a3b8',
+                          fontSize: '11px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {copied ? <Check size={11} style={{ color: '#10b981' }} /> : <Copy size={11} />}
+                        Copy to Clipboard
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1260,247 +1402,16 @@ export default function DatabaseDesigner({
               {/* Workspace Area */}
               <div className="workspace-body" style={{ height: 'calc(100% - 48px)', position: 'relative' }}>
 
-                {isSplitView && splitViewMode === 'dsl' && (
-                  <aside className="split-editor-panel">
-                    <div className="macos-header">
-                      <div className="macos-left">
-                        <span className="macos-title">DataDraft DSL</span>
-                      </div>
-                      <div className="macos-actions">
-                        <button
-                          className="macos-action-btn active"
-                          style={{ cursor: 'default' }}
-                        >
-                          DSL
-                        </button>
-                        <button
-                          className="macos-action-btn"
-                          onClick={() => copyToClipboard(importCode)}
-                          title="Copy Shorthand Code"
-                        >
-                          Copy
-                        </button>
-                      </div>
-                    </div>
 
-                    <div className="split-textarea-wrapper" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', position: 'relative', height: 'calc(100% - 40px)' }}>
-                      <div className="code-editor-container" style={{ position: 'relative', width: '100%', height: '100%', flexGrow: 1 }}>
-                        <pre
-                          className="code-editor-highlight"
-                          dangerouslySetInnerHTML={{ __html: highlightShorthand(importCode) }}
-                        />
-                        <textarea
-                          className="code-editor-textarea"
-                          value={importCode}
-                          onChange={(e) => setImportCode(e.target.value)}
-                          spellCheck="false"
-                        />
-                      </div>
-                    </div>
-
-                    {importError && showToast && (
-                      <div className="toast-bar-bottom" style={{ margin: '8px', padding: '6px 12px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: '#f87171' }}>
-                        <span>⚠️ {importError}</span>
-                        <button style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }} onClick={() => setShowToast(false)}>Dismiss</button>
-                      </div>
-                    )}
-                  </aside>
-                )}
 
                 {isSplitView && splitViewMode === 'export' && (
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                    {/* Export Header */}
-                    <div className="macos-header" style={{ userSelect: 'none' }}>
-                      <div className="macos-left" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div
-                          onClick={() => setIsSplitView(false)}
-                          style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444', cursor: 'pointer', transition: 'opacity 0.2s', position: 'relative' }}
-                          title="Cerrar y volver al canvas"
-                          className="macos-dot-close"
-                        />
-                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b', opacity: 0.8 }} />
-                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#10b981', opacity: 0.8 }} />
-                        <span className="macos-title" style={{ marginLeft: '12px' }}>Script Generator</span>
-                      </div>
-                      <div className="macos-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button className="macos-action-btn active" style={{ cursor: 'default' }}>Export</button>
-                        <button className="macos-action-btn" onClick={() => { setSplitViewMode('dsl') }}>DSL</button>
-                        <button
-                          className="macos-action-btn"
-                          onClick={() => setIsSplitView(false)}
-                          style={{
-                            background: 'rgba(239, 68, 68, 0.1)',
-                            border: '1px solid rgba(239, 68, 68, 0.2)',
-                            color: '#ef4444',
-                            borderRadius: '4px',
-                            padding: '3px 8px',
-                            fontSize: '11px',
-                            marginLeft: '8px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Volver al Canvas
-                        </button>
-                      </div>
-                    </div>
 
                     {/* Export Body */}
                     <div style={{ display: 'flex', flexDirection: 'row', flex: 1, overflow: 'hidden' }}>
-                      {/* Left: Target DB & Settings */}
-                      <div style={{ width: '220px', borderRight: '1px solid #1e293b', display: 'flex', flexDirection: 'column', padding: '16px 12px', gap: '16px', overflowY: 'auto', background: '#0a0f18' }}>
-                        <div>
-                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>Target Database</span>
-                          {['PostgreSQL', 'MySQL', 'SQLite', 'MongoDB', 'Prisma ORM'].map(db => (
-                            <div
-                              key={db}
-                              onClick={() => setTargetDb(db)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '8px 10px',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                marginBottom: '2px',
-                                fontSize: '12px',
-                                fontWeight: targetDb === db ? 600 : 400,
-                                color: targetDb === db ? '#38bdf8' : '#94a3b8',
-                                background: targetDb === db ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
-                                border: targetDb === db ? '1px solid rgba(56, 189, 248, 0.2)' : '1px solid transparent',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              <Database size={13} />
-                              {db}
-                              {targetDb === db && db === 'PostgreSQL' && (
-                                <span style={{ marginLeft: 'auto', fontSize: '9px', padding: '1px 5px', borderRadius: '3px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>v15</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-
-                        <div style={{ borderTop: '1px solid #131924', paddingTop: '16px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', marginBottom: '12px', display: 'block' }}>Export Settings</span>
-
-                          <div style={{ marginBottom: '12px' }}>
-                            <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500, marginBottom: '4px', display: 'block', textTransform: 'uppercase' }}>Schema Name</label>
-                            <input
-                              type="text"
-                              value={schemaName}
-                              onChange={(e) => setSchemaName(e.target.value)}
-                              style={{
-                                width: '100%',
-                                padding: '6px 10px',
-                                background: '#0d1117',
-                                border: '1px solid #1e293b',
-                                borderRadius: '4px',
-                                color: '#e2e8f0',
-                                fontSize: '12px',
-                                outline: 'none',
-                                boxSizing: 'border-box'
-                              }}
-                            />
-                          </div>
-
-                          {[
-                            { label: 'Include DROP statements', checked: includeDrop, onChange: setIncludeDrop },
-                            { label: 'Generate relationships (FK)', checked: generateFK, onChange: setGenerateFK },
-                            { label: 'Include seed data', checked: includeSeed, onChange: setIncludeSeed },
-                          ].map((setting) => (
-                            <label
-                              key={setting.label}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '6px 0',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                color: '#cbd5e1'
-                              }}
-                            >
-                              <div
-                                onClick={() => setting.onChange(!setting.checked)}
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  borderRadius: '4px',
-                                  border: setting.checked ? '2px solid #38bdf8' : '2px solid #475569',
-                                  background: setting.checked ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  transition: 'all 0.15s ease',
-                                  flexShrink: 0
-                                }}
-                              >
-                                {setting.checked && <Check size={10} style={{ color: '#38bdf8' }} />}
-                              </div>
-                              {setting.label}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
 
                       {/* Right: SQL Preview */}
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                        {/* Preview Header */}
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '8px 12px',
-                          borderBottom: '1px solid #1e293b',
-                          background: '#0d1117'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }}></span>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b' }}></span>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981' }}></span>
-                            <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>{targetDb} Dialect</span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              onClick={() => copyToClipboard(generateExportSQL())}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 10px',
-                                background: 'rgba(148, 163, 184, 0.08)',
-                                border: '1px solid #334155',
-                                borderRadius: '4px',
-                                color: '#94a3b8',
-                                fontSize: '11px',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              {copied ? <Check size={11} style={{ color: '#10b981' }} /> : <Copy size={11} />}
-                              Copy to Clipboard
-                            </button>
-                            <button
-                              onClick={handleDownloadSQL}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 10px',
-                                background: 'rgba(56, 189, 248, 0.12)',
-                                border: '1px solid rgba(56, 189, 248, 0.3)',
-                                borderRadius: '4px',
-                                color: '#38bdf8',
-                                fontSize: '11px',
-                                cursor: 'pointer',
-                                fontWeight: 600,
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              <Download size={11} />
-                              Download .sql
-                            </button>
-                          </div>
-                        </div>
 
                         {/* SQL Code Preview */}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '16px', background: '#080c14', fontFamily: '"JetBrains Mono", "Fira Code", monospace' }}>
