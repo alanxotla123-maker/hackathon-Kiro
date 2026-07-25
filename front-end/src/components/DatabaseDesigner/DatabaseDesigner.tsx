@@ -26,16 +26,35 @@ import {
   Sparkles,
   Bell,
   ArrowLeft,
+  Save,
+  FolderOpen,
+  Clock,
+  LayoutGrid,
   Users
 } from 'lucide-react'
 import { DashboardHome } from '../Dashboard/DashboardHome'
 import { UserProfileView } from '../Dashboard/UserProfileView'
 
-import type { Table, Column, DatabaseDesignerProps } from './types';
+
+type BwTab = 'home' | 'tree' | 'commits'
+
+import type { Table, Column, DatabaseDesignerProps, SavedSchema } from './types';
 import { DocifyView } from './DocifyView';
 import { highlightShorthand, serializeTablesToShorthand } from './utils';
 import MergeGuard from '../MergeGuard/MergeGuard';
 import StackAgent from '../StackAgent/StackAgent';
+
+const formatSavedDate = (dateStr: string) => {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleString(undefined, { 
+      year: 'numeric', month: 'short', day: 'numeric', 
+      hour: '2-digit', minute: '2-digit' 
+    });
+  } catch (e) {
+    return dateStr;
+  }
+};
 
 export default function DatabaseDesigner({
   setAuthScreen,
@@ -75,6 +94,10 @@ export default function DatabaseDesigner({
   const [activeMasterTab, setActiveMasterTab] = useState<'home' | 'blueprint' | 'bandwidth' | 'mergeguard' | 'docify' | 'deeplint' | 'profile'>('home')
   const [selectedTableId, setSelectedTableId] = useState<string | null>('orders')
   const [selectedRelationId, setSelectedRelationId] = useState<string | null>(null)
+
+  // Bandwidth State
+  const [bwTab, setBwTab] = useState<BwTab>('tree')
+
   const [zoom, setZoom] = useState<number>(100)
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [auditLogging, setAuditLogging] = useState<boolean>(true)
@@ -109,6 +132,19 @@ export default function DatabaseDesigner({
 
   const [isPropertiesCollapsed, setIsPropertiesCollapsed] = useState<boolean>(false)
 
+  // Save system state
+  const [savedSchemas, setSavedSchemas] = useState<SavedSchema[]>(() => {
+    try {
+      const stored = localStorage.getItem('db_blueprint_saves')
+      return stored ? JSON.parse(stored) : []
+    } catch {
+      return []
+    }
+  })
+  const [showSavedPanel, setShowSavedPanel] = useState<boolean>(false)
+  const [saveDialogOpen, setSaveDialogOpen] = useState<boolean>(false)
+  const [saveDialogName, setSaveDialogName] = useState<string>('')
+
   // Dragging table node state
   const [draggingTableId, setDraggingTableId] = useState<string | null>(null)
   const [relationDragging, setRelationDragging] = useState<{
@@ -120,6 +156,44 @@ export default function DatabaseDesigner({
   const dragStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const panStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const canvasRef = useRef<HTMLDivElement>(null)
+
+  const handleOpenSaveDialog = () => {
+    setSaveDialogName(`Schema ${new Date().toLocaleDateString()}`)
+    setSaveDialogOpen(true)
+  }
+
+  const handleConfirmSave = () => {
+    if (!saveDialogName.trim()) return
+
+    const newSave: SavedSchema = {
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+      name: saveDialogName,
+      savedAt: new Date().toISOString(),
+      tables: tables,
+      tableCount: tables.length
+    }
+
+    const updatedSaves = [newSave, ...savedSchemas]
+    setSavedSchemas(updatedSaves)
+    localStorage.setItem('db_blueprint_saves', JSON.stringify(updatedSaves))
+    
+    setSaveDialogOpen(false)
+    setSaveDialogName('')
+    showNotification('Schema guardado exitosamente')
+  }
+
+  const handleDeleteSave = (id: string) => {
+    const updatedSaves = savedSchemas.filter(s => s.id !== id)
+    setSavedSchemas(updatedSaves)
+    localStorage.setItem('db_blueprint_saves', JSON.stringify(updatedSaves))
+    showNotification('Guardado eliminado')
+  }
+
+  const handleLoadSchema = (save: SavedSchema) => {
+    setTables(save.tables)
+    setImportCode(serializeTablesToShorthand(save.tables))
+    showNotification('Schema cargado')
+  }
 
   // Column types options
   const columnTypes = ['UUID', 'String', 'Timestamp', 'Decimal', 'Integer', 'Boolean', 'Text', 'DateTime']
@@ -1118,7 +1192,8 @@ export default function DatabaseDesigner({
                     <Code size={13} />
                     Split View
                   </button>
-                  <button className="btn-secondary" onClick={() => showNotification('Project saved successfully!')}>
+                  <button className="btn-secondary" onClick={handleOpenSaveDialog} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Save size={13} />
                     Save
                   </button>
                   <button
@@ -1142,8 +1217,48 @@ export default function DatabaseDesigner({
                 </div>
               </div>
 
+              {/* Save Dialog Modal */}
+              {saveDialogOpen && (
+                <div className="save-dialog-overlay" onClick={() => setSaveDialogOpen(false)}>
+                  <div className="save-dialog" onClick={e => e.stopPropagation()}>
+                    <div className="save-dialog-header">
+                      <Save size={16} style={{ color: 'var(--accent-blue)' }} />
+                      <span>Guardar Schema</span>
+                      <button className="icon-btn" onClick={() => setSaveDialogOpen(false)} style={{ marginLeft: 'auto' }}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="save-dialog-body">
+                      <label className="form-label" style={{ fontSize: '11px', marginBottom: '6px', display: 'block' }}>Nombre del guardado</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={saveDialogName}
+                        onChange={e => setSaveDialogName(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleConfirmSave() }}
+                        autoFocus
+                        placeholder="Mi schema v1..."
+                        style={{ width: '100%', marginBottom: '12px' }}
+                      />
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <button className="btn-secondary" onClick={() => setSaveDialogOpen(false)}>Cancelar</button>
+                        <button
+                          className="btn-primary"
+                          onClick={handleConfirmSave}
+                          disabled={!saveDialogName.trim()}
+                          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <Save size={13} />
+                          Guardar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Workspace Area */}
-              <div className="workspace-body" style={{ height: 'calc(100% - 48px)' }}>
+              <div className="workspace-body" style={{ height: 'calc(100% - 48px)', position: 'relative' }}>
 
                 {isSplitView && splitViewMode === 'dsl' && (
                   <aside className="split-editor-panel">
@@ -1664,259 +1779,352 @@ export default function DatabaseDesigner({
                       </div>
                     </main>
 
+                    {/* ── Saved Schemas Drawer Panel ─────────────────────────── */}
+                    {showSavedPanel && (
+                      <div className="saved-schemas-panel">
+                        <div className="saved-panel-header">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <FolderOpen size={15} style={{ color: 'var(--accent-purple)' }} />
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Saved Schemas</span>
+                            <span style={{
+                              backgroundColor: 'rgba(139,92,246,0.15)',
+                              color: 'var(--accent-purple)',
+                              borderRadius: '10px',
+                              padding: '1px 7px',
+                              fontSize: '10px',
+                              fontWeight: 700
+                            }}>{savedSchemas.length}</span>
+                          </div>
+                          <button className="icon-btn" onClick={() => setShowSavedPanel(false)} title="Cerrar panel">
+                            <X size={14} />
+                          </button>
+                        </div>
+
+                        <div className="saved-panel-body">
+                          {savedSchemas.length === 0 ? (
+                            <div className="saved-panel-empty">
+                              <div style={{ fontSize: '36px', marginBottom: '12px', opacity: 0.4 }}>💾</div>
+                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.5 }}>
+                                No hay guardados aún.<br />
+                                Usa el botón <strong>Save</strong> para guardar tu schema actual.
+                              </p>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {savedSchemas.map((save, idx) => (
+                                <div key={save.id} className="saved-schema-card" style={{ animationDelay: `${idx * 40}ms` }}>
+                                  <div className="saved-card-top">
+                                    <div className="saved-card-icon">
+                                      <LayoutGrid size={13} style={{ color: 'var(--accent-purple)' }} />
+                                    </div>
+                                    <div className="saved-card-info">
+                                      <span className="saved-card-name">{save.name}</span>
+                                      <span className="saved-card-meta">
+                                        <Clock size={9} />
+                                        {formatSavedDate(save.savedAt)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="saved-card-stats">
+                                    <span className="saved-stat-badge">
+                                      <Database size={9} />
+                                      {save.tableCount} {save.tableCount === 1 ? 'tabla' : 'tablas'}
+                                    </span>
+                                    <span className="saved-stat-badge">
+                                      <Link2 size={9} />
+                                      {save.tables.reduce((acc, t) => acc + t.columns.filter(c => c.isForeignKey).length, 0)} rels
+                                    </span>
+                                  </div>
+                                  <div className="saved-card-actions">
+                                    <button
+                                      className="saved-action-load"
+                                      onClick={() => handleLoadSchema(save)}
+                                      title="Cargar este schema"
+                                    >
+                                      <FolderOpen size={11} />
+                                      Cargar
+                                    </button>
+                                    <button
+                                      className="saved-action-delete"
+                                      onClick={() => handleDeleteSave(save.id)}
+                                      title="Eliminar guardado"
+                                    >
+                                      <Trash2 size={11} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="saved-panel-footer">
+                          <button
+                            className="btn-primary"
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px' }}
+                            onClick={handleOpenSaveDialog}
+                          >
+                            <Save size={13} />
+                            Guardar schema actual
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {/* ─────────────────────────────────────────────────────────── */}
+
                     {/* Right side Properties Panel */}
                     <aside className={`right-panel ${isPropertiesCollapsed ? 'collapsed' : ''}`}>
                       <div
-                        className="properties-toggle-btn"
-                        onClick={() => setIsPropertiesCollapsed(!isPropertiesCollapsed)}
-                        title={isPropertiesCollapsed ? 'Expandir Propiedades' : 'Colapsar Propiedades'}
-                      >
-                        {isPropertiesCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
-                      </div>
-                      {selectedTable ? (
-                        <>
-                          <div className="panel-header">
-                            <h2>Table Properties</h2>
-                            <button className="icon-btn" onClick={() => setSelectedTableId(null)}>
-                              <X size={15} />
-                            </button>
-                          </div>
-
-                          <div className="panel-body">
-                            <div className="form-group">
-                              <label className="form-label">Table Name</label>
-                              <input
-                                type="text"
-                                className="form-input"
-                                value={selectedTable.name}
-                                onChange={(e) => handleUpdateTableMeta({ name: e.target.value })}
-                              />
+                          className="properties-toggle-btn"
+                          onClick={() => setIsPropertiesCollapsed(!isPropertiesCollapsed)}
+                          title={isPropertiesCollapsed ? 'Expandir Propiedades' : 'Colapsar Propiedades'}
+                        >
+                          {isPropertiesCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
+                        </div>
+                        {selectedTable ? (
+                          <>
+                            <div className="panel-header">
+                              <h2>Table Properties</h2>
+                              <button className="icon-btn" onClick={() => setSelectedTableId(null)}>
+                                <X size={15} />
+                              </button>
                             </div>
 
-                            <div className="form-group">
-                              <label className="form-label">Table Comment</label>
-                              <textarea
-                                className="form-textarea"
-                                value={selectedTable.comment}
-                                onChange={(e) => handleUpdateTableMeta({ comment: e.target.value })}
-                              />
-                            </div>
-
-                            <div className="form-group">
-                              <div className="section-title-row">
-                                <label className="form-label">Columns ({selectedTable.columns.length})</label>
-                                <button className="btn-link-add" onClick={handleAddColumn}>
-                                  <Plus size={11} />
-                                  Add
-                                </button>
+                            <div className="panel-body">
+                              <div className="form-group">
+                                <label className="form-label">Table Name</label>
+                                <input
+                                  type="text"
+                                  className="form-input"
+                                  value={selectedTable.name}
+                                  onChange={(e) => handleUpdateTableMeta({ name: e.target.value })}
+                                />
                               </div>
 
-                              <div className="columns-edit-list">
-                                {selectedTable.columns.map((col) => (
-                                  <div key={col.id} className="column-edit-item">
-                                    <div className="column-edit-main">
-                                      <input
-                                        type="text"
-                                        className="form-input"
-                                        style={{ padding: '4px 8px', fontSize: '12px' }}
-                                        value={col.name}
-                                        onChange={(e) => handleUpdateColumn(col.id, { name: e.target.value })}
-                                      />
-                                      <select
-                                        className="form-select"
-                                        value={col.type}
-                                        onChange={(e) => handleUpdateColumn(col.id, { type: e.target.value })}
-                                      >
-                                        {columnTypes.map((t) => (
-                                          <option key={t} value={t}>
-                                            {t}
-                                          </option>
-                                        ))}
-                                      </select>
-                                      <button
-                                        className="column-edit-delete"
-                                        onClick={() => handleDeleteColumn(col.id)}
-                                        title="Delete Column"
-                                      >
-                                        <Trash2 size={12} />
-                                      </button>
-                                    </div>
+                              <div className="form-group">
+                                <label className="form-label">Table Comment</label>
+                                <textarea
+                                  className="form-textarea"
+                                  value={selectedTable.comment}
+                                  onChange={(e) => handleUpdateTableMeta({ comment: e.target.value })}
+                                />
+                              </div>
 
-                                    <div className="column-edit-checkboxes">
-                                      <label className="checkbox-label">
+                              <div className="form-group">
+                                <div className="section-title-row">
+                                  <label className="form-label">Columns ({selectedTable.columns.length})</label>
+                                  <button className="btn-link-add" onClick={handleAddColumn}>
+                                    <Plus size={11} />
+                                    Add
+                                  </button>
+                                </div>
+
+                                <div className="columns-edit-list">
+                                  {selectedTable.columns.map((col) => (
+                                    <div key={col.id} className="column-edit-item">
+                                      <div className="column-edit-main">
                                         <input
-                                          type="checkbox"
-                                          checked={col.isPrimaryKey}
-                                          onChange={(e) =>
-                                            handleUpdateColumn(col.id, {
-                                              isPrimaryKey: e.target.checked,
-                                              isForeignKey: e.target.checked ? false : col.isForeignKey
-                                            })
-                                          }
+                                          type="text"
+                                          className="form-input"
+                                          style={{ padding: '4px 8px', fontSize: '12px' }}
+                                          value={col.name}
+                                          onChange={(e) => handleUpdateColumn(col.id, { name: e.target.value })}
                                         />
-                                        PK
-                                      </label>
-
-                                      <label className="checkbox-label">
-                                        <input
-                                          type="checkbox"
-                                          checked={col.isForeignKey}
-                                          onChange={(e) =>
-                                            handleUpdateColumn(col.id, {
-                                              isForeignKey: e.target.checked,
-                                              isPrimaryKey: e.target.checked ? false : col.isPrimaryKey,
-                                              foreignKeyTargetTableId: e.target.checked
-                                                ? tables.find((t) => t.id !== selectedTable.id)?.id || ''
-                                                : undefined,
-                                              foreignKeyTargetColumnId: e.target.checked
-                                                ? tables.find((t) => t.id !== selectedTable.id)?.columns[0]?.id || ''
-                                                : undefined
-                                            })
-                                          }
-                                        />
-                                        FK
-                                      </label>
-
-                                      {col.isForeignKey && (
                                         <select
                                           className="form-select"
-                                          style={{ padding: '2px 4px', fontSize: '10px' }}
-                                          value={col.foreignKeyTargetTableId}
-                                          onChange={(e) => {
-                                            const targetTabId = e.target.value
-                                            const targetTableObj = tables.find((t) => t.id === targetTabId)
-                                            handleUpdateColumn(col.id, {
-                                              foreignKeyTargetTableId: targetTabId,
-                                              foreignKeyTargetColumnId: targetTableObj?.columns[0]?.id || ''
-                                            })
-                                          }}
+                                          value={col.type}
+                                          onChange={(e) => handleUpdateColumn(col.id, { type: e.target.value })}
                                         >
-                                          {tables
-                                            .filter((t) => t.id !== selectedTable.id)
-                                            .map((t) => (
-                                              <option key={t.id} value={t.id}>
-                                                {t.name}
-                                              </option>
-                                            ))}
+                                          {columnTypes.map((t) => (
+                                            <option key={t} value={t}>
+                                              {t}
+                                            </option>
+                                          ))}
                                         </select>
-                                      )}
+                                        <button
+                                          className="column-edit-delete"
+                                          onClick={() => handleDeleteColumn(col.id)}
+                                          title="Delete Column"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </div>
+
+                                      <div className="column-edit-checkboxes">
+                                        <label className="checkbox-label">
+                                          <input
+                                            type="checkbox"
+                                            checked={col.isPrimaryKey}
+                                            onChange={(e) =>
+                                              handleUpdateColumn(col.id, {
+                                                isPrimaryKey: e.target.checked,
+                                                isForeignKey: e.target.checked ? false : col.isForeignKey
+                                              })
+                                            }
+                                          />
+                                          PK
+                                        </label>
+
+                                        <label className="checkbox-label">
+                                          <input
+                                            type="checkbox"
+                                            checked={col.isForeignKey}
+                                            onChange={(e) =>
+                                              handleUpdateColumn(col.id, {
+                                                isForeignKey: e.target.checked,
+                                                isPrimaryKey: e.target.checked ? false : col.isPrimaryKey,
+                                                foreignKeyTargetTableId: e.target.checked
+                                                  ? tables.find((t) => t.id !== selectedTable.id)?.id || ''
+                                                  : undefined,
+                                                foreignKeyTargetColumnId: e.target.checked
+                                                  ? tables.find((t) => t.id !== selectedTable.id)?.columns[0]?.id || ''
+                                                  : undefined
+                                              })
+                                            }
+                                          />
+                                          FK
+                                        </label>
+
+                                        {col.isForeignKey && (
+                                          <select
+                                            className="form-select"
+                                            style={{ padding: '2px 4px', fontSize: '10px' }}
+                                            value={col.foreignKeyTargetTableId}
+                                            onChange={(e) => {
+                                              const targetTabId = e.target.value
+                                              const targetTableObj = tables.find((t) => t.id === targetTabId)
+                                              handleUpdateColumn(col.id, {
+                                                foreignKeyTargetTableId: targetTabId,
+                                                foreignKeyTargetColumnId: targetTableObj?.columns[0]?.id || ''
+                                              })
+                                            }}
+                                          >
+                                            {tables
+                                              .filter((t) => t.id !== selectedTable.id)
+                                              .map((t) => (
+                                                <option key={t.id} value={t.id}>
+                                                  {t.name}
+                                                </option>
+                                              ))}
+                                          </select>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                ))}
+                                  ))}
+                                </div>
                               </div>
-                            </div>
 
-                            <div className="form-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-                              <label className="form-label">Engine Settings</label>
-                              <div className="toggle-row">
-                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Audit Logging</span>
-                                <label className="switch">
-                                  <input
-                                    type="checkbox"
-                                    checked={auditLogging}
-                                    onChange={(e) => setAuditLogging(e.target.checked)}
-                                  />
-                                  <span className="slider" />
-                                </label>
+                              <div className="form-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                                <label className="form-label">Engine Settings</label>
+                                <div className="toggle-row">
+                                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Audit Logging</span>
+                                  <label className="switch">
+                                    <input
+                                      type="checkbox"
+                                      checked={auditLogging}
+                                      onChange={(e) => setAuditLogging(e.target.checked)}
+                                    />
+                                    <span className="slider" />
+                                  </label>
+                                </div>
                               </div>
-                            </div>
 
-                            <div className="sql-preview-container">
-                              <div className="sql-header">
-                                <span className="form-label">SQL Preview</span>
-                                <button
-                                  className="icon-btn"
-                                  onClick={() => copyToClipboard(generateSQL(selectedTable))}
-                                  title="Copy SQL"
-                                >
-                                  {copied ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
-                                </button>
+                              <div className="sql-preview-container">
+                                <div className="sql-header">
+                                  <span className="form-label">SQL Preview</span>
+                                  <button
+                                    className="icon-btn"
+                                    onClick={() => copyToClipboard(generateSQL(selectedTable))}
+                                    title="Copy SQL"
+                                  >
+                                    {copied ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
+                                  </button>
+                                </div>
+                                <pre className="sql-box">
+                                  <span className="sql-keyword">CREATE TABLE</span> <span className="sql-string">"{selectedTable.name}"</span> ({"\n"}
+                                  {selectedTable.columns.map((c, idx) => {
+                                    let typeStr = c.type
+                                    if (c.type === 'String') typeStr = 'UUID'
+                                    if (c.type === 'Decimal') typeStr = 'DECIMAL(10,2)'
+                                    const isLast = idx === selectedTable.columns.length - 1
+                                    return (
+                                      <span key={c.id}>
+                                        {"  "}<span className="sql-string">"{c.name}"</span> <span className="sql-type">{typeStr.toUpperCase()}</span>
+                                        {c.isPrimaryKey && <span className="sql-keyword"> PRIMARY KEY</span>}
+                                        {!isLast && ","}{"\n"}
+                                      </span>
+                                    )
+                                  })}
+                                  );
+                                </pre>
                               </div>
-                              <pre className="sql-box">
-                                <span className="sql-keyword">CREATE TABLE</span> <span className="sql-string">"{selectedTable.name}"</span> ({"\n"}
-                                {selectedTable.columns.map((c, idx) => {
-                                  let typeStr = c.type
-                                  if (c.type === 'String') typeStr = 'UUID'
-                                  if (c.type === 'Decimal') typeStr = 'DECIMAL(10,2)'
-                                  const isLast = idx === selectedTable.columns.length - 1
-                                  return (
-                                    <span key={c.id}>
-                                      {"  "}<span className="sql-string">"{c.name}"</span> <span className="sql-type">{typeStr.toUpperCase()}</span>
-                                      {c.isPrimaryKey && <span className="sql-keyword"> PRIMARY KEY</span>}
-                                      {!isLast && ","}{"\n"}
-                                    </span>
-                                  )
-                                })}
-                                );
-                              </pre>
                             </div>
+                          </>
+                        ) : (
+                          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            <h3>No Table Selected</h3>
+                            <p style={{ fontSize: '12px' }}>Click a table in the canvas to inspect its properties.</p>
                           </div>
-                        </>
-                      ) : (
-                        <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                          <h3>No Table Selected</h3>
-                          <p style={{ fontSize: '12px' }}>Click a table in the canvas to inspect its properties.</p>
-                        </div>
-                      )}
-                    </aside>
-                  </>
+                        )}
+                      </aside>
+                    </>
                 )}
+                  </div>
+
               </div>
-
-            </div>
           )}
 
-          {activeMasterTab !== 'home' && activeMasterTab !== 'blueprint' && activeMasterTab !== 'profile' && activeMasterTab !== 'docify' && activeMasterTab !== 'mergeguard' && activeMasterTab !== 'bandwidth' && (
-            <div className="placeholder-tab-content" style={{ padding: '40px', color: 'var(--text-muted)', textAlign: 'center' }}>
-              <h2>{activeMasterTab.toUpperCase()} Module</h2>
-              <p style={{ fontSize: '14px', marginTop: '8px' }}>This component is fully active and synchronized with production environment.</p>
-            </div>
-          )}
+              {activeMasterTab !== 'home' && activeMasterTab !== 'blueprint' && activeMasterTab !== 'profile' && activeMasterTab !== 'docify' && activeMasterTab !== 'mergeguard' && activeMasterTab !== 'bandwidth' && (
+                <div className="placeholder-tab-content" style={{ padding: '40px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                  <h2>{activeMasterTab.toUpperCase()} Module</h2>
+                  <p style={{ fontSize: '14px', marginTop: '8px' }}>This component is fully active and synchronized with production environment.</p>
+                </div>
+              )}
 
-          {activeMasterTab === 'bandwidth' && (
-            <StackAgent onBack={() => setActiveMasterTab('home')} />
-          )}
+              {activeMasterTab === 'bandwidth' && (
+                <StackAgent onBack={() => setActiveMasterTab('home')} />
+              )}
 
-          {activeMasterTab === 'mergeguard' && (
-            <MergeGuard />
-          )}
+              {activeMasterTab === 'mergeguard' && (
+                <MergeGuard />
+              )}
 
-          {activeMasterTab === 'docify' && (
-            <DocifyView
-              tables={tables}
-              showNotification={showNotification}
-              onBack={() => setActiveMasterTab('home')}
-            />
-          )}
+              {activeMasterTab === 'docify' && (
+                <DocifyView
+                  tables={tables}
+                  showNotification={showNotification}
+                  onBack={() => setActiveMasterTab('home')}
+                />
+              )}
 
-          {activeMasterTab === 'profile' && (
-            <UserProfileView
-              userName={loggedInUserName}
-              setAuthScreen={setAuthScreen}
-              showNotification={showNotification}
-            />
-          )}
-        </main>
+              {activeMasterTab === 'profile' && (
+                <UserProfileView
+                  userName={loggedInUserName}
+                  setAuthScreen={setAuthScreen}
+                  showNotification={showNotification}
+                />
+              )}
+            </main>
 
         {/* Master Bottom Status Bar */}
-        <footer className="master-bottom-status-bar">
-          <div className="status-left">
-            <span className="status-indicator">
-              <span className="status-dot green"></span>
-              Gateway: Connected
-            </span>
-            <span className="status-separator">•</span>
-            <span className="status-branch" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <GitBranch size={11} />
-              main @ 7f2a1b9
-            </span>
-          </div>
-          <div className="status-right">
-            <span>UTC: {new Date().toISOString().slice(11, 19)}</span>
-            <span className="status-separator">•</span>
-            <span>Node: v18.12.1</span>
-          </div>
-        </footer>
+          <footer className="master-bottom-status-bar">
+            <div className="status-left">
+              <span className="status-indicator">
+                <span className="status-dot green"></span>
+                Gateway: Connected
+              </span>
+              <span className="status-separator">•</span>
+              <span className="status-branch" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <GitBranch size={11} />
+                main @ 7f2a1b9
+              </span>
+            </div>
+            <div className="status-right">
+              <span>UTC: {new Date().toISOString().slice(11, 19)}</span>
+              <span className="status-separator">•</span>
+              <span>Node: v18.12.1</span>
+            </div>
+          </footer>
       </div>
     </div>
   )
