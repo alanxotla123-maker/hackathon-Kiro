@@ -4,10 +4,11 @@ import Register from './components/Auth/Register'
 import ForgotPassword from './components/Auth/ForgotPassword'
 import Success from './components/Auth/Success'
 import DatabaseDesigner from './components/DatabaseDesigner/DatabaseDesigner'
+import DeepLint from './components/DeepLint/DeepLint'
 import './App.css'
 
 export default function App() {
-  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'workspace'>(() => {
+  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'workspace' | 'deeplint'>(() => {
     const saved = localStorage.getItem('authSession')
     return saved === 'active' ? 'workspace' : 'login'
   })
@@ -16,7 +17,7 @@ export default function App() {
   const [registerConflict, setRegisterConflict] = useState<boolean>(false)
   const [notification, setNotification] = useState<string | null>(null)
 
-  const handleSetAuthScreen = (screen: 'login' | 'register' | 'forgot' | 'success' | 'workspace') => {
+  const handleSetAuthScreen = (screen: 'login' | 'register' | 'forgot' | 'success' | 'workspace' | 'deeplint') => {
     setAuthScreen(screen)
     if (screen === 'workspace') {
       localStorage.setItem('authSession', 'active')
@@ -97,6 +98,10 @@ export default function App() {
           setAuthScreen={handleSetAuthScreen}
           showNotification={showNotification}
         />
+      )}
+
+      {authScreen === 'deeplint' && (
+        <DeepLint onBack={() => handleSetAuthScreen('workspace')} />
       )}
     </div>
   )

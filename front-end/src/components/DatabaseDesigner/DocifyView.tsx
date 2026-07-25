@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Loader2, Download, GitBranch, Link2, Activity, Check, Settings } from 'lucide-react';
+import { FileText, Loader2, Download, GitBranch, Link2, Activity, Check, Settings, ArrowLeft } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import ReactMarkdown from 'react-markdown';
 import type { Table } from './types';
@@ -7,9 +7,10 @@ import type { Table } from './types';
 interface DocifyViewProps {
   tables: Table[];
   showNotification: (msg: string) => void;
+  onBack?: () => void;
 }
 
-export const DocifyView: React.FC<DocifyViewProps> = ({ tables, showNotification }) => {
+export const DocifyView: React.FC<DocifyViewProps> = ({ tables, showNotification, onBack }) => {
   const [docifyRepoUrl, setDocifyRepoUrl] = useState<string>('https://github.com/usuario/repo-name');
   const [docifyStatus, setDocifyStatus] = useState<'idle' | 'cloning' | 'filtering' | 'generating' | 'converting' | 'ready'>('idle');
   const [docifyLoadingStep, setDocifyLoadingStep] = useState<number>(0);
@@ -262,7 +263,7 @@ Fecha de generación: ${new Date().toLocaleDateString()}
   };
 
   return (
-    <div className="docify-workspace-container" style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '24px', gap: '20px', height: 'calc(100vh - 80px)', overflow: 'hidden', background: '#0a0f1d', color: '#e2e8f0', boxSizing: 'border-box' }}>
+    <div className="docify-workspace-container" style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '24px', gap: '20px', height: '100vh', overflow: 'hidden', background: '#0a0f1d', color: '#e2e8f0', boxSizing: 'border-box' }}>
       
       <div style={{
         display: 'flex',
@@ -275,6 +276,17 @@ Fecha de generación: ${new Date().toLocaleDateString()}
         width: '100%',
         boxSizing: 'border-box'
       }}>
+        {onBack && (
+          <button 
+            onClick={onBack}
+            style={{
+              background: 'transparent', border: '1px solid #334155', borderRadius: '6px', 
+              color: '#94a3b8', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+            }}
+          >
+            <ArrowLeft size={16} />
+          </button>
+        )}
         <Link2 size={16} style={{ color: '#64748b' }} />
         <input
           type="text"

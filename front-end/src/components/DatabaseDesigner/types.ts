@@ -21,3 +21,11 @@ export interface Table {
   y: number
   columns: Column[]
 }
+
+export interface SavedSchema {
+  id: string
+  name: string
+  savedAt: string
+  tables: Table[]
+  tableCount: number
+}
