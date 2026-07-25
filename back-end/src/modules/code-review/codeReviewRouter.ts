@@ -122,6 +122,68 @@ Do not return any markdown wraps outside of the JSON block, output ONLY the JSON
   }
 });
 
+// ─── POC Day-1: POST /analyze ───────────────────────────────────────
+// Lightweight endpoint – receives raw code, returns structured issues.
+// No DB dependency so it works without Prisma migrations.
+router.post("/analyze", async (req, res) => {
+  const { code } = req.body;
+
+  if (!code || typeof code !== "string") {
+    return res.status(400).json({ error: "Se requiere un campo 'code' de tipo string." });
+  }
+
+  const prompt = `Eres un revisor de código senior. Analiza el siguiente código fuente y devuelve ÚNICAMENTE un JSON array.
+Cada elemento del array debe tener exactamente estas propiedades:
+- "linea": número de línea aproximado donde detectaste el issue (número entero).
+- "tipo_de_issue": una de estas categorías: "bug" | "performance" | "style" | "security" | "best-practice".
+- "sugerencia": texto conciso en español explicando qué mejorar y cómo.
+
+Devuelve SOLO el JSON array, sin markdown, sin backticks, sin texto adicional.
+
+Código a revisar:
+${code.slice(0, 6000)}`;
+
+  try {
+    let rawResponse = "";
+
+    if (process.env.ANTHROPIC_API_KEY) {
+      // ── Anthropic ──
+      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const msg = await anthropic.messages.create({
+        model: "claude-3-haiku-20240307",
+        max_tokens: 1500,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const block = msg.content[0];
+      if (block && block.type === "text") rawResponse = block.text;
+    } else if (process.env.OPENAI_API_KEY) {
+      // ── OpenAI ──
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 1500,
+      });
+      rawResponse = completion.choices[0]?.message?.content || "";
+    } else {
+      // ── Mock fallback (sin API keys) ──
+      rawResponse = JSON.stringify([
+        { linea: 1, tipo_de_issue: "best-practice", sugerencia: "Agrega 'use strict' o usa módulos ES para mayor seguridad." },
+        { linea: 5, tipo_de_issue: "style", sugerencia: "Usa 'const' en lugar de 'let' cuando la variable no se reasigna." },
+        { linea: 12, tipo_de_issue: "performance", sugerencia: "Evita crear objetos dentro de bucles; mueve la inicialización fuera del loop." },
+      ]);
+    }
+
+    // Limpiar posibles backticks que la IA agregue
+    const clean = rawResponse.replace(/```json/g, "").replace(/```/g, "").trim();
+    const issues = JSON.parse(clean);
+    res.json({ issues });
+  } catch (err: any) {
+    console.error("[code-review/analyze]", err);
+    res.status(500).json({ error: err.message || "Error al analizar el código." });
+  }
+});
+
 // GET all reviews for a project
 router.get("/reviews/:projectId", async (req, res) => {
   try {

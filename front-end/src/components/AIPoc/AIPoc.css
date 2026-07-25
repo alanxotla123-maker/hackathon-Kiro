@@ -1,0 +1,419 @@
+/* ── AIPoc Component Styles ────────────────────────────────── */
+
+.aipoc-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ── Header ── */
+.aipoc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  background: rgba(22, 27, 34, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.12);
+}
+
+.aipoc-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.aipoc-back-btn {
+  background: transparent;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.aipoc-back-btn:hover {
+  border-color: #38bdf8;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.06);
+}
+
+.aipoc-header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e6edf3;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.aipoc-header p {
+  font-size: 12px;
+  color: #8b949e;
+  margin: 2px 0 0 0;
+}
+
+.aipoc-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(168, 85, 247, 0.15));
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+/* ── Action Bar ── */
+.aipoc-actions {
+  display: flex;
+  gap: 12px;
+  padding: 16px 28px;
+  border-bottom: 1px solid #21262d;
+  background: rgba(13, 17, 23, 0.6);
+}
+
+.aipoc-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.aipoc-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.06));
+  pointer-events: none;
+}
+
+.aipoc-btn-primary {
+  background: linear-gradient(135deg, #1e6f9e, #155e85);
+  color: #e0f2fe;
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.2);
+}
+
+.aipoc-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2585b8, #1a7aab);
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.3);
+  transform: translateY(-1px);
+}
+
+.aipoc-btn-secondary {
+  background: linear-gradient(135deg, #6d28d9, #5b21b6);
+  color: #e9d5ff;
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.2);
+}
+
+.aipoc-btn-secondary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  box-shadow: 0 4px 16px rgba(168, 85, 247, 0.3);
+  transform: translateY(-1px);
+}
+
+.aipoc-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ── Panels Grid ── */
+.aipoc-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 960px) {
+  .aipoc-panels {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+}
+
+/* ── Panel Card ── */
+.aipoc-panel {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #21262d;
+  min-height: 0;
+}
+
+.aipoc-panel:last-child {
+  border-right: none;
+}
+
+.aipoc-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: rgba(22, 27, 34, 0.7);
+  border-bottom: 1px solid #21262d;
+}
+
+.aipoc-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #8b949e;
+}
+
+.aipoc-panel-title .icon-doc {
+  color: #38bdf8;
+}
+
+.aipoc-panel-title .icon-review {
+  color: #a855f7;
+}
+
+.aipoc-panel-filename {
+  font-size: 11px;
+  color: #484f58;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.aipoc-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  min-height: 300px;
+  max-height: calc(100vh - 200px);
+}
+
+/* ── Code Display ── */
+.aipoc-code-block {
+  padding: 16px 20px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #c9d1d9;
+  min-height: 100%;
+}
+
+.aipoc-code-block .code-line {
+  display: flex;
+  gap: 16px;
+}
+
+.aipoc-code-block .line-num {
+  color: #484f58;
+  min-width: 32px;
+  text-align: right;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* ── Review Results (rendered via react-markdown) ── */
+.aipoc-review-results {
+  padding: 20px;
+}
+
+.aipoc-review-results h1,
+.aipoc-review-results h2,
+.aipoc-review-results h3 {
+  color: #e6edf3;
+  border-bottom: 1px solid #21262d;
+  padding-bottom: 8px;
+  margin-top: 20px;
+}
+
+.aipoc-review-results p {
+  color: #c9d1d9;
+  line-height: 1.65;
+}
+
+.aipoc-review-results code {
+  background: rgba(56, 189, 248, 0.08);
+  color: #79c0ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+}
+
+.aipoc-review-results pre {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 14px;
+  overflow-x: auto;
+}
+
+.aipoc-review-results pre code {
+  background: none;
+  padding: 0;
+}
+
+.aipoc-review-results table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+
+.aipoc-review-results th {
+  background: rgba(56, 189, 248, 0.08);
+  color: #38bdf8;
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #21262d;
+}
+
+.aipoc-review-results td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #21262d;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+.aipoc-review-results tr:hover td {
+  background: rgba(56, 189, 248, 0.03);
+}
+
+/* ── Issue Cards (non-markdown fallback) ── */
+.aipoc-issue-card {
+  background: rgba(22, 27, 34, 0.8);
+  border: 1px solid #21262d;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+  transition: border-color 0.2s;
+}
+
+.aipoc-issue-card:hover {
+  border-color: #30363d;
+}
+
+.aipoc-issue-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.aipoc-issue-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.aipoc-issue-badge.bug {
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+}
+
+.aipoc-issue-badge.performance {
+  background: rgba(210, 153, 34, 0.15);
+  color: #d29922;
+  border: 1px solid rgba(210, 153, 34, 0.3);
+}
+
+.aipoc-issue-badge.style {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.aipoc-issue-badge.security {
+  background: rgba(248, 81, 73, 0.2);
+  color: #ff7b72;
+  border: 1px solid rgba(248, 81, 73, 0.4);
+}
+
+.aipoc-issue-badge.best-practice {
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+  border: 1px solid rgba(63, 185, 80, 0.3);
+}
+
+.aipoc-issue-line {
+  font-size: 11px;
+  color: #484f58;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.aipoc-issue-text {
+  font-size: 13px;
+  color: #c9d1d9;
+  line-height: 1.55;
+}
+
+/* ── Empty States ── */
+.aipoc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+  gap: 12px;
+  opacity: 0.6;
+}
+
+.aipoc-empty-icon {
+  color: #30363d;
+}
+
+.aipoc-empty p {
+  font-size: 13px;
+  color: #484f58;
+  max-width: 260px;
+}
+
+/* ── Spinner Animation ── */
+@keyframes aipoc-spin {
+  to { transform: rotate(360deg); }
+}
+
+.aipoc-spinner {
+  animation: aipoc-spin 0.8s linear infinite;
+}
+
+/* ── Scrollbar ── */
+.aipoc-panel-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.aipoc-panel-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.aipoc-panel-body::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 3px;
+}
+
+.aipoc-panel-body::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
