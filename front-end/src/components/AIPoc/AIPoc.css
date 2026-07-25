@@ -1,12 +1,13 @@
-/* ── AIPoc Component Styles ────────────────────────────────── */
+/* ── AIPoc Component Styles (Day 2 – 3-Panel Layout) ──────── */
 
 .aipoc-container {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   background: #0d1117;
   color: #c9d1d9;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
 }
 
 /* ── Header ── */
@@ -14,10 +15,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 28px;
+  padding: 12px 20px;
   background: rgba(22, 27, 34, 0.85);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(56, 189, 248, 0.12);
+  flex-shrink: 0;
 }
 
 .aipoc-header-left {
@@ -46,7 +48,7 @@
 }
 
 .aipoc-header h1 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #e6edf3;
   margin: 0;
@@ -54,7 +56,7 @@
 }
 
 .aipoc-header p {
-  font-size: 12px;
+  font-size: 11px;
   color: #8b949e;
   margin: 2px 0 0 0;
 }
@@ -69,22 +71,15 @@
   background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(168, 85, 247, 0.15));
   color: #38bdf8;
   border: 1px solid rgba(56, 189, 248, 0.25);
+  white-space: nowrap;
 }
 
-/* ── Action Bar ── */
-.aipoc-actions {
-  display: flex;
-  gap: 12px;
-  padding: 16px 28px;
-  border-bottom: 1px solid #21262d;
-  background: rgba(13, 17, 23, 0.6);
-}
-
+/* ── Buttons ── */
 .aipoc-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 8px 16px;
   border: none;
   border-radius: 10px;
   font-size: 13px;
@@ -93,6 +88,7 @@
   transition: all 0.25s ease;
   position: relative;
   overflow: hidden;
+  white-space: nowrap;
 }
 
 .aipoc-btn::after {
@@ -115,59 +111,154 @@
   transform: translateY(-1px);
 }
 
-.aipoc-btn-secondary {
-  background: linear-gradient(135deg, #6d28d9, #5b21b6);
-  color: #e9d5ff;
-  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.2);
-}
-
-.aipoc-btn-secondary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #7c3aed, #6d28d9);
-  box-shadow: 0 4px 16px rgba(168, 85, 247, 0.3);
-  transform: translateY(-1px);
-}
-
 .aipoc-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none !important;
 }
 
-/* ── Panels Grid ── */
-.aipoc-panels {
+/* ── Three-Panel Layout ── */
+.aipoc-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
+  grid-template-columns: 260px 1fr 1fr;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
-@media (max-width: 960px) {
-  .aipoc-panels {
-    grid-template-columns: 1fr;
+@media (max-width: 1100px) {
+  .aipoc-layout {
+    grid-template-columns: 220px 1fr;
     grid-template-rows: 1fr 1fr;
+  }
+  .aipoc-sidebar {
+    grid-row: 1 / -1;
   }
 }
 
-/* ── Panel Card ── */
+@media (max-width: 768px) {
+  .aipoc-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr 1fr;
+  }
+  .aipoc-sidebar {
+    max-height: 200px;
+  }
+}
+
+/* ── Sidebar ── */
+.aipoc-sidebar {
+  display: flex;
+  flex-direction: column;
+  background: #0d1117;
+  border-right: 1px solid #21262d;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.aipoc-sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+/* ── File Tree ── */
+.aipoc-tree {
+  font-size: 13px;
+}
+
+.aipoc-tree-folder-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  user-select: none;
+  color: #8b949e;
+  transition: background 0.15s;
+}
+
+.aipoc-tree-folder-header:hover {
+  background: rgba(56, 189, 248, 0.04);
+  color: #c9d1d9;
+}
+
+.tree-chevron {
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  color: #484f58;
+}
+
+.tree-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.tree-icon.folder {
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+.tree-icon.file {
+  color: #484f58;
+  flex-shrink: 0;
+}
+
+.tree-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aipoc-tree-children {
+  padding-left: 16px;
+}
+
+.aipoc-tree-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  cursor: pointer;
+  color: #8b949e;
+  transition: all 0.15s;
+  border-left: 2px solid transparent;
+}
+
+.aipoc-tree-file:hover {
+  background: rgba(56, 189, 248, 0.04);
+  color: #c9d1d9;
+}
+
+.aipoc-tree-file.active {
+  background: rgba(56, 189, 248, 0.08);
+  color: #e6edf3;
+  border-left-color: #38bdf8;
+}
+
+.aipoc-tree-file.active .tree-icon.file {
+  color: #38bdf8;
+}
+
+/* ── Panels ── */
 .aipoc-panel {
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #21262d;
   min-height: 0;
+  overflow: hidden;
 }
 
-.aipoc-panel:last-child {
-  border-right: none;
+.aipoc-panel-center {
+  border-right: 1px solid #21262d;
 }
 
 .aipoc-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 10px 16px;
   background: rgba(22, 27, 34, 0.7);
   border-bottom: 1px solid #21262d;
+  flex-shrink: 0;
 }
 
 .aipoc-panel-title {
@@ -193,36 +284,42 @@
   font-size: 11px;
   color: #484f58;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }
 
 .aipoc-panel-body {
   flex: 1;
   overflow-y: auto;
   padding: 0;
-  min-height: 300px;
-  max-height: calc(100vh - 200px);
+  min-height: 0;
 }
 
 /* ── Code Display ── */
 .aipoc-code-block {
-  padding: 16px 20px;
+  padding: 12px 16px;
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
-  font-size: 12.5px;
-  line-height: 1.7;
+  font-size: 12px;
+  line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-word;
   color: #c9d1d9;
-  min-height: 100%;
 }
 
 .aipoc-code-block .code-line {
   display: flex;
-  gap: 16px;
+  gap: 12px;
+}
+
+.aipoc-code-block .code-line:hover {
+  background: rgba(56, 189, 248, 0.03);
 }
 
 .aipoc-code-block .line-num {
   color: #484f58;
-  min-width: 32px;
+  min-width: 28px;
   text-align: right;
   user-select: none;
   flex-shrink: 0;
@@ -230,7 +327,7 @@
 
 /* ── Review Results (rendered via react-markdown) ── */
 .aipoc-review-results {
-  padding: 20px;
+  padding: 16px;
 }
 
 .aipoc-review-results h1,
@@ -238,13 +335,15 @@
 .aipoc-review-results h3 {
   color: #e6edf3;
   border-bottom: 1px solid #21262d;
-  padding-bottom: 8px;
-  margin-top: 20px;
+  padding-bottom: 6px;
+  margin-top: 16px;
+  font-size: 15px;
 }
 
 .aipoc-review-results p {
   color: #c9d1d9;
-  line-height: 1.65;
+  line-height: 1.6;
+  font-size: 13px;
 }
 
 .aipoc-review-results code {
@@ -253,14 +352,14 @@
   padding: 2px 6px;
   border-radius: 4px;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 12px;
+  font-size: 11.5px;
 }
 
 .aipoc-review-results pre {
   background: #161b22;
   border: 1px solid #30363d;
   border-radius: 8px;
-  padding: 14px;
+  padding: 12px;
   overflow-x: auto;
 }
 
@@ -272,24 +371,25 @@
 .aipoc-review-results table {
   width: 100%;
   border-collapse: collapse;
-  margin: 12px 0;
+  margin: 10px 0;
+  font-size: 12px;
 }
 
 .aipoc-review-results th {
   background: rgba(56, 189, 248, 0.08);
   color: #38bdf8;
   text-align: left;
-  padding: 10px 14px;
-  font-size: 11px;
+  padding: 8px 10px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 2px solid #21262d;
 }
 
 .aipoc-review-results td {
-  padding: 10px 14px;
+  padding: 8px 10px;
   border-bottom: 1px solid #21262d;
-  font-size: 13px;
+  font-size: 12px;
   vertical-align: top;
 }
 
@@ -297,13 +397,13 @@
   background: rgba(56, 189, 248, 0.03);
 }
 
-/* ── Issue Cards (non-markdown fallback) ── */
+/* ── Issue Cards ── */
 .aipoc-issue-card {
   background: rgba(22, 27, 34, 0.8);
   border: 1px solid #21262d;
   border-radius: 10px;
-  padding: 14px 18px;
-  margin-bottom: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
   transition: border-color 0.2s;
 }
 
@@ -315,7 +415,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .aipoc-issue-badge {
@@ -327,7 +427,8 @@
   border-radius: 6px;
 }
 
-.aipoc-issue-badge.bug {
+/* Badge variants – Day 2 schema types */
+.aipoc-issue-badge.seguridad {
   background: rgba(248, 81, 73, 0.15);
   color: #f85149;
   border: 1px solid rgba(248, 81, 73, 0.3);
@@ -339,16 +440,24 @@
   border: 1px solid rgba(210, 153, 34, 0.3);
 }
 
-.aipoc-issue-badge.style {
+.aipoc-issue-badge.estilo {
   background: rgba(56, 189, 248, 0.15);
   color: #38bdf8;
   border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
+/* Legacy badge variants from Day 1 (backward compat) */
+.aipoc-issue-badge.bug,
 .aipoc-issue-badge.security {
-  background: rgba(248, 81, 73, 0.2);
-  color: #ff7b72;
-  border: 1px solid rgba(248, 81, 73, 0.4);
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+}
+
+.aipoc-issue-badge.style {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
 .aipoc-issue-badge.best-practice {
@@ -364,9 +473,10 @@
 }
 
 .aipoc-issue-text {
-  font-size: 13px;
+  font-size: 12.5px;
   color: #c9d1d9;
-  line-height: 1.55;
+  line-height: 1.5;
+  margin: 0;
 }
 
 /* ── Empty States ── */
@@ -375,9 +485,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 24px;
+  padding: 48px 20px;
   text-align: center;
-  gap: 12px;
+  gap: 10px;
   opacity: 0.6;
 }
 
@@ -386,9 +496,9 @@
 }
 
 .aipoc-empty p {
-  font-size: 13px;
+  font-size: 12px;
   color: #484f58;
-  max-width: 260px;
+  max-width: 220px;
 }
 
 /* ── Spinner Animation ── */
@@ -400,20 +510,24 @@
   animation: aipoc-spin 0.8s linear infinite;
 }
 
-/* ── Scrollbar ── */
-.aipoc-panel-body::-webkit-scrollbar {
-  width: 6px;
+/* ── Scrollbars ── */
+.aipoc-panel-body::-webkit-scrollbar,
+.aipoc-sidebar-body::-webkit-scrollbar {
+  width: 5px;
 }
 
-.aipoc-panel-body::-webkit-scrollbar-track {
+.aipoc-panel-body::-webkit-scrollbar-track,
+.aipoc-sidebar-body::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.aipoc-panel-body::-webkit-scrollbar-thumb {
+.aipoc-panel-body::-webkit-scrollbar-thumb,
+.aipoc-sidebar-body::-webkit-scrollbar-thumb {
   background: #30363d;
   border-radius: 3px;
 }
 
-.aipoc-panel-body::-webkit-scrollbar-thumb:hover {
+.aipoc-panel-body::-webkit-scrollbar-thumb:hover,
+.aipoc-sidebar-body::-webkit-scrollbar-thumb:hover {
   background: #484f58;
 }
