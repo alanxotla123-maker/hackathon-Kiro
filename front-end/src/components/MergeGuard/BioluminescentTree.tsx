@@ -1,152 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import './MergeGuard.css';
 
 export interface BranchData {
   id: string;
   name: string;
-  color: string;
-  glow: string;
-  paths: string[];
-  commits: { id: string; x: number; y: number; label: string; r?: number }[];
+  color?: string;
+  glow?: string;
+  paths?: string[];
+  commits?: { id: string; x: number; y: number; label: string; r?: number }[];
 }
-
-// Real Git Data from the repository
-const defaultBranchesData: BranchData[] = [
-  {
-    id: 'main',
-    name: 'main',
-    color: '#4ade80',
-    glow: 'glow-green',
-    paths: [
-      'M 500 300 L 490 200 L 510 100', // Center upward
-    ],
-    commits: [
-      { id: 'ea90a55', x: 500, y: 300, label: '', r: 24 },
-      { id: '4d18a56', x: 490, y: 200, label: '', r: 16 }
-    ]
-  },
-  {
-    id: 'feat-map',
-    name: 'feat/bioluminescent-map',
-    color: '#4ade80',
-    glow: 'glow-green',
-    paths: [
-      'M 485 400 L 380 370 L 280 340 L 180 280 L 100 200',
-    ],
-    commits: [
-      { id: 'b0e7e4c', x: 380, y: 370, label: 'Commit nodes', r: 18 },
-      { id: '980e988', x: 280, y: 340, label: '', r: 14 },
-      { id: '2231258', x: 180, y: 280, label: '', r: 14 },
-      { id: 'd35e55e', x: 100, y: 200, label: 'feat/bioluminescent-map', r: 18 }
-    ]
-  },
-  {
-    id: 'feat-1',
-    name: 'feat/bluminescent-1',
-    color: '#4ade80',
-    glow: 'glow-green',
-    paths: [
-      'M 465 420 L 360 400 L 260 370 L 160 310',
-    ],
-    commits: [
-      { id: 'f1_c1', x: 360, y: 400, label: '', r: 18 },
-      { id: 'f1_c2', x: 260, y: 370, label: '', r: 14 },
-      { id: 'f1_c3', x: 160, y: 310, label: 'feat/bluminescent-1', r: 14 }
-    ]
-  },
-  {
-    id: 'feat-oranogn',
-    name: 'feat/biolouiloper-oranogn',
-    color: '#4ade80',
-    glow: 'glow-green',
-    paths: [
-      'M 470 340 L 370 310 L 270 250 L 170 170',
-    ],
-    commits: [
-      { id: 'fo_c1', x: 370, y: 310, label: 'Commit nodes', r: 16 },
-      { id: 'fo_c2', x: 270, y: 250, label: 'feat/biolouiloper-oranogn', r: 16 },
-      { id: 'fo_c3', x: 170, y: 170, label: '', r: 16 }
-    ]
-  },
-  {
-    id: 'release-v2.1',
-    name: 'release/v2.1',
-    color: '#3b82f6',
-    glow: 'glow-blue',
-    paths: [
-      'M 515 400 L 620 370 L 750 320 L 850 240',
-    ],
-    commits: [
-      { id: 'r_c1', x: 620, y: 370, label: 'release/v2.1', r: 18 },
-      { id: 'r_c2', x: 750, y: 320, label: '', r: 16 },
-      { id: 'r_c3', x: 850, y: 240, label: 'release/v2.1', r: 18 }
-    ]
-  },
-  {
-    id: 'hotfix',
-    name: 'hotfix/conflict-resolution',
-    color: '#3b82f6',
-    glow: 'glow-blue',
-    paths: [
-      'M 525 450 L 650 420 L 780 380 L 900 320',
-    ],
-    commits: [
-      { id: 'h_c1', x: 650, y: 420, label: 'hotfix/conflict-resolution', r: 16 },
-      { id: 'h_c2', x: 780, y: 380, label: 'Commit nodes', r: 16 },
-      { id: 'h_c3', x: 900, y: 320, label: '', r: 16 }
-    ]
-  },
-  {
-    id: 'conflict1',
-    name: 'conflict #1',
-    color: '#f43f5e',
-    glow: 'glow-red',
-    paths: [
-      'M 520 500 L 660 510 L 780 490 L 900 450',
-    ],
-    commits: [
-      { id: 'c1_c1', x: 660, y: 510, label: 'conflict #1', r: 16 }
-    ]
-  },
-  {
-    id: 'conflict2',
-    name: 'conflict #2',
-    color: '#f43f5e',
-    glow: 'glow-red',
-    paths: [
-      'M 530 600 L 680 620 L 820 600 L 950 560',
-    ],
-    commits: [
-      { id: 'c2_c1', x: 680, y: 620, label: 'conflict #2', r: 16 },
-      { id: 'c2_c2', x: 820, y: 600, label: 'Commit nodes', r: 14 }
-    ]
-  }
-];
-
-const GeoNode = ({ cx, cy, r, color, filter }: { cx: number, cy: number, r: number, color: string, filter?: string }) => {
-  const pts = {
-    p0: `${cx},${cy - r}`,
-    p1: `${cx + r * 0.866},${cy - r * 0.5}`,
-    p2: `${cx + r * 0.866},${cy + r * 0.5}`,
-    p3: `${cx},${cy + r}`,
-    p4: `${cx - r * 0.866},${cy + r * 0.5}`,
-    p5: `${cx - r * 0.866},${cy - r * 0.5}`,
-    i0: `${cx},${cy - r * 0.3}`,
-    i1: `${cx + r * 0.4},${cy + r * 0.2}`,
-    i2: `${cx - r * 0.4},${cy + r * 0.2}`,
-  };
-
-  return (
-    <g filter={filter}>
-      <polygon points={`${pts.p0} ${pts.p1} ${pts.p2} ${pts.p3} ${pts.p4} ${pts.p5}`} fill={color} opacity="0.4" />
-      <polygon points={`${pts.p0} ${pts.p1} ${pts.p2} ${pts.p3} ${pts.p4} ${pts.p5}`} fill="none" stroke={color} strokeWidth="2.5" />
-      <polygon points={`${pts.i0} ${pts.i1} ${pts.i2}`} fill="none" stroke={color} strokeWidth="2" />
-      <path d={`M ${pts.p0} L ${pts.i0} M ${pts.p1} L ${pts.i0} M ${pts.p1} L ${pts.i1} M ${pts.p2} L ${pts.i1} M ${pts.p3} L ${pts.i1} M ${pts.p3} L ${pts.i2} M ${pts.p4} L ${pts.i2} M ${pts.p5} L ${pts.i2} M ${pts.p5} L ${pts.i0}`} fill="none" stroke={color} strokeWidth="1.5" opacity="0.9" />
-      <circle cx={cx} cy={cy} r={r * 0.2} fill="#fff" />
-    </g>
-  );
-};
-
 
 interface BioluminescentTreeProps {
   customBranchesData?: BranchData[] | null;
@@ -155,320 +18,502 @@ interface BioluminescentTreeProps {
 const BioluminescentTree: React.FC<BioluminescentTreeProps> = ({ customBranchesData }) => {
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const [isDragging, setIsDragging] = useState(false);
-  
-  const branchesData = customBranchesData && customBranchesData.length > 0 ? customBranchesData : defaultBranchesData;
+  const [selectedBranch, setSelectedBranch] = useState<any>(null);
+
+  // Generate highly performant Yggdrasil tree paths with extreme realism
+  const treeVisuals = useMemo(() => {
+    const defaultBranches = [
+      { name: 'main' },
+      { name: 'feat/bioluminescent-map' },
+      { name: 'feat/bluminescent-1' },
+      { name: 'feat/biolouiloper-oranogn' },
+      { name: 'release/v2.1' },
+      { name: 'hotfix/conflict-resolution' },
+      { name: 'conflict #1' },
+      { name: 'conflict #2' },
+    ];
+
+    const branches = (customBranchesData && customBranchesData.length > 0) ? customBranchesData : defaultBranches;
+
+    const paths: { d: string; width: number; opacity: number; color: string; isData?: boolean; dash?: string; branchName?: string }[] = [];
+    const labels: { x: number; y: number; text: string; color: string; isNode: boolean; branchData?: any }[] = [];
+
+    // Performance optimization: Compile thousands of leaves into a handful of paths grouped by speed/color
+    const leafGroups: Record<string, { slow: string; med: string; fast: string }> = {};
+
+    let seed = 999;
+    const random = () => {
+      const x = Math.sin(seed++) * 10000;
+      return x - Math.floor(x);
+    };
+
+    // Recursive function for natural twigs and cyber-foliage
+    const spawnTwigs = (x: number, y: number, angle: number, length: number, width: number, depth: number, color: string, branchName: string) => {
+      if (depth === 0 || width < 0.5) return;
+
+      const numBranches = random() > 0.2 ? 2 : 1;
+
+      for (let i = 0; i < numBranches; i++) {
+        const bend = (random() - 0.5) * 1.2;
+        const newAngle = angle + bend;
+        const newLength = length * (0.6 + random() * 0.4);
+
+        const endX = x + Math.cos(newAngle) * newLength;
+        const endY = y + Math.sin(newAngle) * newLength;
+
+        const cpX = x + Math.cos(angle) * newLength * 0.5;
+        const cpY = y + Math.sin(angle) * newLength * 0.5;
+
+        const d = `M ${x} ${y} Q ${cpX} ${cpY} ${endX} ${endY}`;
+
+        paths.push({ d, width: width * 1.5, opacity: 0.15, color, branchName }); // ambient glow
+        paths.push({ d, width: Math.max(0.5, width * 0.8), opacity: 0.6 + (width * 0.05), color, branchName }); // core
+
+        if (random() > 0.7) {
+          paths.push({ d, width: 0.8, opacity: 0.9, color: '#ffffff', isData: true, dash: '2 20', branchName });
+        }
+
+        // High-Performance Leaf Generation
+        if (depth === 1 || depth === 2) {
+          if (!leafGroups[color]) leafGroups[color] = { slow: '', med: '', fast: '' };
+
+          const numLeaves = depth === 1 ? 12 : 4;
+          for (let k = 0; k < numLeaves; k++) {
+            const lx = endX + (random() - 0.5) * 60;
+            const ly = endY + (random() - 0.5) * 60;
+            // A tiny line with round linecap renders as a perfect dot in SVG, allowing 1000s of dots in 1 path!
+            const leafD = `M ${lx} ${ly} l 0.01 0 `;
+
+            const speed = random();
+            if (speed < 0.33) leafGroups[color].slow += leafD;
+            else if (speed < 0.66) leafGroups[color].med += leafD;
+            else leafGroups[color].fast += leafD;
+          }
+        }
+
+        spawnTwigs(endX, endY, newAngle, newLength, width * 0.65, depth - 1, color, branchName);
+      }
+    };
+
+    const trunkBottomY = 950;
+    const trunkTopY = 650;
+    const trunkX = 500;
+
+    // 2. Trunk Strands (Realistic Braided Bark)
+    const trunkStrands = 16;
+    const trunkPositions = Array.from({ length: trunkStrands }, () => {
+      const baseSpread = (random() - 0.5) * 110;
+      return { x: trunkX + baseSpread, y: trunkBottomY };
+    });
+
+    // Massive ambient glows replace the need for 50+ strands
+    paths.push({ d: `M ${trunkX} ${trunkBottomY} Q ${trunkX} ${(trunkBottomY + trunkTopY) / 2} ${trunkX} ${trunkTopY}`, width: 55, opacity: 0.1, color: '#39ff14', branchName: 'main' });
+    paths.push({ d: `M ${trunkX} ${trunkBottomY} Q ${trunkX} ${(trunkBottomY + trunkTopY) / 2} ${trunkX} ${trunkTopY}`, width: 28, opacity: 0.25, color: '#39ff14', branchName: 'main' });
+    paths.push({ d: `M ${trunkX} ${trunkBottomY} Q ${trunkX} ${(trunkBottomY + trunkTopY) / 2} ${trunkX} ${trunkTopY}`, width: 8, opacity: 0.8, color: '#39ff14', branchName: 'main' }); // solid core
+
+    trunkPositions.forEach((pos, idx) => {
+      let d = `M ${pos.x} ${trunkBottomY}`;
+      let currentX = pos.x;
+      let currentY = trunkBottomY;
+
+      const numSteps = 5;
+      const stepY = (trunkBottomY - trunkTopY) / numSteps;
+      const phase = random() * Math.PI * 2;
+      const frequency = 1.5;
+
+      for (let i = 1; i <= numSteps; i++) {
+        const nextY = trunkBottomY - i * stepY;
+        const progress = i / numSteps;
+
+        // Core center of the trunk at this height
+        const centerX = pos.x * (1 - progress) + trunkX * progress;
+
+        // Mathematical twist to intertwine the bark
+        const twist = Math.sin(phase + i * frequency) * (25 * (1 - progress));
+        const nextX = centerX + twist + (random() - 0.5) * 8;
+
+        const cpX = currentX + (nextX - currentX) * 0.5 + (random() - 0.5) * 15;
+        const cpY = currentY - stepY * 0.5;
+
+        d += ` Q ${cpX} ${cpY} ${nextX} ${nextY}`;
+
+        currentX = nextX;
+        currentY = nextY;
+      }
+
+      paths.push({ d, width: random() > 0.5 ? 2.5 : 1.5, opacity: 0.35 + random() * 0.5, color: '#39ff14', branchName: 'main' });
+      if (random() > 0.7) paths.push({ d, width: 1.5, opacity: 1, color: '#ffffff', isData: true, dash: '4 35', branchName: 'main' });
+    });
+
+    // 3. Draw Data Branches
+    const sortedBranches = [...branches].sort((a, b) => {
+      if (a.name === 'main' || a.name === 'master') return -1;
+      if (b.name === 'main' || b.name === 'master') return 1;
+      return 0;
+    });
+
+    const totalBranches = sortedBranches.length;
+
+    sortedBranches.forEach((branch, idx) => {
+      const isMain = branch.name === 'main' || branch.name === 'master';
+
+      let branchColor = '#39ff14';
+      if (branch.name.includes('release')) branchColor = '#00d2ff';
+      else if (branch.name.includes('hotfix') || branch.name.includes('conflict') || branch.name.includes('bug')) branchColor = '#ff3366';
+      else if (!isMain && !branch.name.includes('feat')) branchColor = '#a78bfa';
+
+      let targetAngle = -Math.PI / 2;
+      if (!isMain) {
+        const fraction = totalBranches > 1 ? (idx / (totalBranches - 1)) : 0.5;
+        let spread = -1.4 + (fraction * 2.8);
+        if (Math.abs(spread) < 0.3) spread = spread < 0 ? -0.4 : 0.4;
+        targetAngle = (-Math.PI / 2) + spread;
+      }
+
+      let currentWidth = isMain ? 20 : 12;
+      const numSegments = isMain ? 5 : 4 + Math.floor(random() * 2);
+      let segmentLength = isMain ? 115 : 95;
+
+      const numStrands = isMain ? 6 : 4; // Optimized branch bundling
+
+      // REALISM: Sprout branches at varying heights ALONG the trunk
+      let glowX = trunkX + (random() - 0.5) * 10;
+      let glowY = isMain ? trunkTopY : trunkTopY + 40 + (random() * 120);
+      let dGlow = `M ${glowX} ${glowY}`;
+
+      const strandPaths = Array.from({ length: numStrands }, () => {
+        const sx = trunkX + (random() - 0.5) * 20;
+        const sy = glowY + (random() - 0.5) * 20;
+        return { d: `M ${sx} ${sy}`, x: sx, y: sy };
+      });
+
+      let currentAngle = -Math.PI / 2;
+
+      for (let s = 0; s < numSegments; s++) {
+        currentAngle += (targetAngle - currentAngle) * 0.45;
+        currentAngle += (random() - 0.5) * 0.15; // Natural wander
+
+        const nextX = glowX + Math.cos(currentAngle) * segmentLength;
+        const nextY = glowY + Math.sin(currentAngle) * segmentLength;
+
+        const cpGlowX = glowX + Math.cos(currentAngle) * segmentLength * 0.6;
+        const cpGlowY = glowY + Math.sin(currentAngle) * segmentLength * 0.6;
+
+        dGlow += ` Q ${cpGlowX} ${cpGlowY} ${nextX} ${nextY}`;
+
+        strandPaths.forEach((strand, i) => {
+          // Braiding physics: strands twist around the central branch path
+          const twist = Math.sin(s * 1.5 + i) * currentWidth * 0.9;
+          const targetNx = nextX + Math.cos(currentAngle + Math.PI / 2) * twist;
+          const targetNy = nextY + Math.sin(currentAngle + Math.PI / 2) * twist;
+
+          const cpTwist = Math.sin((s - 0.5) * 1.5 + i) * currentWidth * 1.2;
+          const cpX = strand.x + Math.cos(currentAngle) * segmentLength * 0.6 + Math.cos(currentAngle + Math.PI / 2) * cpTwist;
+          const cpY = strand.y + Math.sin(currentAngle) * segmentLength * 0.6 + Math.sin(currentAngle + Math.PI / 2) * cpTwist;
+
+          strand.d += ` Q ${cpX} ${cpY} ${targetNx} ${targetNy}`;
+          strand.x = targetNx;
+          strand.y = targetNy;
+        });
+
+        if (s > 1 && s < numSegments - 1 && random() > 0.5) {
+          labels.push({ x: nextX, y: nextY, text: '', color: branchColor, isNode: true, branchData: branch });
+        }
+
+        if (s > 0) {
+          const twigAngle = currentAngle + (random() > 0.5 ? 0.9 : -0.9);
+          spawnTwigs(glowX, glowY, twigAngle, segmentLength * 0.8, currentWidth * 0.4, 3, branchColor, branch.name);
+        }
+
+        glowX = nextX;
+        glowY = nextY;
+        currentWidth *= 0.75;
+        segmentLength *= 0.9;
+      }
+
+      paths.push({ d: dGlow, width: isMain ? 28 : 16, opacity: 0.1, color: branchColor, branchName: branch.name });
+      paths.push({ d: dGlow, width: isMain ? 14 : 8, opacity: 0.25, color: branchColor, branchName: branch.name });
+
+      strandPaths.forEach(strand => {
+        paths.push({ d: strand.d, width: random() > 0.5 ? 2.5 : 1.5, opacity: 0.3 + random() * 0.6, color: branchColor, branchName: branch.name });
+        if (random() > 0.7) paths.push({ d: strand.d, width: 1.5, opacity: 0.9, color: '#ffffff', isData: true, dash: '5 45', branchName: branch.name });
+      });
+
+      spawnTwigs(glowX, glowY, currentAngle, segmentLength * 1.5, currentWidth, 4, branchColor, branch.name);
+
+      labels.push({
+        x: glowX + Math.cos(currentAngle) * 20,
+        y: glowY + Math.sin(currentAngle) * 20,
+        text: branch.name,
+        color: branchColor,
+        isNode: true,
+        branchData: branch
+      });
+    });
+
+    return { paths, labels, leafGroups };
+  }, [customBranchesData]);
 
   const handleWheel = (e: React.WheelEvent<SVGSVGElement>) => {
     const zoomAmount = e.deltaY * -0.002;
-    setTransform(prev => {
-       const newScale = Math.max(0.3, Math.min(4, prev.scale + zoomAmount));
-       return { ...prev, scale: newScale };
-    });
+    setTransform(prev => ({ ...prev, scale: Math.max(0.3, Math.min(4, prev.scale + zoomAmount)) }));
   };
-
-  const handleZoomIn = () => setTransform(prev => ({ ...prev, scale: Math.min(4, prev.scale + 0.2) }));
-  const handleZoomOut = () => setTransform(prev => ({ ...prev, scale: Math.max(0.3, prev.scale - 0.2) }));
-  const handleZoomReset = () => setTransform({ x: 0, y: 0, scale: 1 });
-
-  const handleMouseDown = () => setIsDragging(true);
-  const handleMouseUp = () => setIsDragging(false);
-  const handleMouseLeave = () => setIsDragging(false);
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!isDragging) return;
     const svgRect = e.currentTarget.getBoundingClientRect();
     const scaleRatio = Math.min(svgRect.width / 1000, svgRect.height / 950) * transform.scale;
-    
-    setTransform(prev => ({
-      ...prev,
-      x: prev.x + e.movementX / scaleRatio,
-      y: prev.y + e.movementY / scaleRatio
-    }));
+    setTransform(prev => ({ ...prev, x: prev.x + e.movementX / scaleRatio, y: prev.y + e.movementY / scaleRatio }));
   };
-  
-  // Crystal Faceted Trunk Generator
-  const levels = 6;
-  const grid = Array.from({ length: levels }).map((_, i) => {
-    const y = 800 - i * 100;
-    const rOuter = 80 - i * 13; 
-    const rInner = 35 - i * 6;
-    const yOffset = (i % 2 === 0) ? 15 : -15; // Creates the zig-zag faceting
-    return {
-      lo: { x: 500 - rOuter, y: y + yOffset },
-      li: { x: 500 - rInner, y },
-      c:  { x: 500, y: y - yOffset },
-      ri: { x: 500 + rInner, y },
-      ro: { x: 500 + rOuter, y: y + yOffset }
-    };
-  });
-
-  const polygons = [];
-  const lines = [];
-
-  for (let i = 0; i < levels - 1; i++) {
-    const row = grid[i];
-    const next = grid[i+1];
-
-    // Left outer to Left inner
-    polygons.push({ pts: `${row.lo.x},${row.lo.y} ${row.li.x},${row.li.y} ${next.li.x},${next.li.y}`, op: 0.15 });
-    polygons.push({ pts: `${row.lo.x},${row.lo.y} ${next.li.x},${next.li.y} ${next.lo.x},${next.lo.y}`, op: 0.25 });
-    
-    // Left inner to Center
-    polygons.push({ pts: `${row.li.x},${row.li.y} ${row.c.x},${row.c.y} ${next.c.x},${next.c.y}`, op: 0.35 });
-    polygons.push({ pts: `${row.li.x},${row.li.y} ${next.c.x},${next.c.y} ${next.li.x},${next.li.y}`, op: 0.45 });
-
-    // Center to Right inner
-    polygons.push({ pts: `${row.c.x},${row.c.y} ${row.ri.x},${row.ri.y} ${next.ri.x},${next.ri.y}`, op: 0.35 });
-    polygons.push({ pts: `${row.c.x},${row.c.y} ${next.ri.x},${next.ri.y} ${next.c.x},${next.c.y}`, op: 0.25 });
-
-    // Right inner to Right outer
-    polygons.push({ pts: `${row.ri.x},${row.ri.y} ${row.ro.x},${row.ro.y} ${next.ro.x},${next.ro.y}`, op: 0.15 });
-    polygons.push({ pts: `${row.ri.x},${row.ri.y} ${next.ro.x},${next.ro.y} ${next.ri.x},${next.ri.y}`, op: 0.2 });
-
-    // Lines for the wireframe structure
-    lines.push(`M ${row.lo.x} ${row.lo.y} L ${next.lo.x} ${next.lo.y}`);
-    lines.push(`M ${row.li.x} ${row.li.y} L ${next.li.x} ${next.li.y}`);
-    lines.push(`M ${row.c.x} ${row.c.y} L ${next.c.x} ${next.c.y}`);
-    lines.push(`M ${row.ri.x} ${row.ri.y} L ${next.ri.x} ${next.ri.y}`);
-    lines.push(`M ${row.ro.x} ${row.ro.y} L ${next.ro.x} ${next.ro.y}`);
-    
-    // Cross lines
-    lines.push(`M ${row.lo.x} ${row.lo.y} L ${row.li.x} ${row.li.y} L ${row.c.x} ${row.c.y} L ${row.ri.x} ${row.ri.y} L ${row.ro.x} ${row.ro.y}`);
-    lines.push(`M ${row.lo.x} ${row.lo.y} L ${next.li.x} ${next.li.y}`);
-    lines.push(`M ${row.li.x} ${row.li.y} L ${next.c.x} ${next.c.y}`);
-    lines.push(`M ${row.c.x} ${row.c.y} L ${next.ri.x} ${next.ri.y}`);
-    lines.push(`M ${row.ri.x} ${row.ri.y} L ${next.ro.x} ${next.ro.y}`);
-  }
-
-  // Generate geometric roots
-  const roots = [
-    { pts: `300,880 ${grid[0].lo.x},${grid[0].lo.y} ${grid[0].li.x},${grid[0].li.y} 350,860`, op: 0.2 },
-    { pts: `350,860 ${grid[0].li.x},${grid[0].li.y} ${grid[0].c.x},${grid[0].c.y} 420,890`, op: 0.3 },
-    { pts: `420,890 ${grid[0].c.x},${grid[0].c.y} ${grid[0].ri.x},${grid[0].ri.y} 580,890`, op: 0.3 },
-    { pts: `580,890 ${grid[0].ri.x},${grid[0].ri.y} ${grid[0].ro.x},${grid[0].ro.y} 700,880`, op: 0.2 },
-  ];
-  const rootLines = [
-    `M 300 880 L ${grid[0].lo.x} ${grid[0].lo.y}`,
-    `M 350 860 L ${grid[0].li.x} ${grid[0].li.y}`,
-    `M 420 890 L ${grid[0].c.x} ${grid[0].c.y}`,
-    `M 580 890 L ${grid[0].ri.x} ${grid[0].ri.y}`,
-    `M 700 880 L ${grid[0].ro.x} ${grid[0].ro.y}`
-  ];
 
   return (
-    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-      <svg 
-        width="100%" 
-        height="100%" 
-        viewBox="0 0 1000 950" 
-        preserveAspectRatio="xMidYMid meet" 
+    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', background: 'transparent' }}>
+
+      <style>{`
+        .yggdrasil-path {
+          fill: none;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          animation: pulse-energy 4s infinite alternate ease-in-out;
+        }
+
+        .data-pulse {
+          fill: none;
+          stroke-linecap: round;
+          animation: data-flow 1.5s linear infinite;
+        }
+
+        .yggdrasil-label {
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          font-weight: 600;
+          fill: #ffffff;
+          letter-spacing: 0.5px;
+        }
+
+        .tech-node {
+          transition: transform 0.2s;
+        }
+        .tech-node:hover {
+          transform: scale(1.5);
+        }
+        
+        .spin-node {
+          animation: spin 6s linear infinite;
+          transform-origin: center;
+        }
+
+        @keyframes pulse-energy {
+          0% { opacity: 0.8; }
+          100% { opacity: 1; }
+        }
+
+        @keyframes data-flow {
+          to { stroke-dashoffset: -100; }
+        }
+        
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
+      <svg
+        width="100%" height="100%"
+        viewBox="0 0 1000 950"
+        preserveAspectRatio="xMidYMid meet"
         style={{ pointerEvents: 'auto', cursor: isDragging ? 'grabbing' : 'grab' }}
         onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
+        onMouseDown={() => { setIsDragging(true); setSelectedBranch(null); }}
         onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
+        onMouseUp={() => setIsDragging(false)}
+        onMouseLeave={() => setIsDragging(false)}
       >
-        
-        {/* Nebulas (Static Background) */}
-        <ellipse cx="500" cy="250" rx="450" ry="300" fill="url(#nebula-purple)" filter="blur(80px)" opacity="0.4" />
-        <ellipse cx="500" cy="650" rx="350" ry="250" fill="url(#nebula-green)" filter="blur(70px)" opacity="0.4" />
-
         <defs>
-          <radialGradient id="nebula-purple" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#8b5cf6" />
+          <radialGradient id="nebula-purple" cx="30%" cy="20%" r="50%">
+            <stop offset="0%" stopColor="rgba(167, 139, 250, 0.25)" />
             <stop offset="100%" stopColor="transparent" />
           </radialGradient>
-          <radialGradient id="nebula-green" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#10b981" />
+          <radialGradient id="nebula-cyan" cx="70%" cy="30%" r="50%">
+            <stop offset="0%" stopColor="rgba(0, 210, 255, 0.15)" />
             <stop offset="100%" stopColor="transparent" />
           </radialGradient>
-
-          {/* Intense Glow Filters */}
-          <filter id="glow-green" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="blur1" />
-            <feGaussianBlur stdDeviation="15" result="blur2" />
-            <feMerge><feMergeNode in="blur2" /><feMergeNode in="blur1" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-          <filter id="glow-cyan" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="blur1" />
-            <feGaussianBlur stdDeviation="12" result="blur2" />
-            <feMerge><feMergeNode in="blur2" /><feMergeNode in="blur1" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-          <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="blur1" />
-            <feGaussianBlur stdDeviation="12" result="blur2" />
-            <feMerge><feMergeNode in="blur2" /><feMergeNode in="blur1" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-          <filter id="glow-red" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="blur1" />
-            <feGaussianBlur stdDeviation="12" result="blur2" />
-            <feMerge><feMergeNode in="blur2" /><feMergeNode in="blur1" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-          <filter id="glow-blue" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3" result="blur1" />
-            <feGaussianBlur stdDeviation="12" result="blur2" />
-            <feMerge><feMergeNode in="blur2" /><feMergeNode in="blur1" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
         </defs>
+        <rect width="100%" height="100%" fill="url(#nebula-purple)" pointerEvents="none" />
+        <rect width="100%" height="100%" fill="url(#nebula-cyan)" pointerEvents="none" />
 
         <g transform={`translate(${transform.x}, ${transform.y}) translate(500, 475) scale(${transform.scale}) translate(-500, -475)`}>
-          {/* Structured Canopy Background (Hexagonal web pattern) */}
-        <g opacity="0.25" stroke="#a78bfa" strokeWidth="2" filter="url(#glow-purple)">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <path key={`canopy-1-${i}`} d={`M ${100 + i*100} 100 L ${150 + i*100} 200 L ${100 + i*100} 300`} fill="none" strokeLinejoin="round" />
-          ))}
-          {Array.from({ length: 9 }).map((_, i) => (
-            <path key={`canopy-2-${i}`} d={`M ${150 + i*100} 200 L ${250 + i*100} 200`} fill="none" />
-          ))}
-          <path d="M 100 100 L 900 100 M 100 300 L 900 300" fill="none" strokeDasharray="10,20" />
-        </g>
 
-        {/* MAIN TRUNK - Crystal Faceted Lattice */}
-        <g filter="url(#glow-green)">
-          {/* Base outer glow */}
-          <polygon points="400,850 480,300 520,300 600,850" fill="#10b981" opacity="0.1" />
-          
-          {/* Trunk Faces */}
-          {polygons.map((poly, idx) => (
-            <polygon key={`trunk-face-${idx}`} points={poly.pts} fill={`rgba(34, 197, 94, ${poly.op})`} />
-          ))}
-          
-          {/* Root Faces */}
-          {roots.map((root, idx) => (
-            <polygon key={`root-face-${idx}`} points={root.pts} fill={`rgba(34, 197, 94, ${root.op})`} />
-          ))}
-
-          {/* Wireframe Structure Lines */}
-          <g stroke="#4ade80" strokeWidth="2" strokeLinejoin="round" opacity="0.9">
-            {lines.map((line, idx) => (
-              <path key={`trunk-line-${idx}`} d={line} fill="none" />
-            ))}
-            {rootLines.map((line, idx) => (
-              <path key={`root-line-${idx}`} d={line} fill="none" />
-            ))}
+          {/* Holographic Base Emitter */}
+          <ellipse cx={500} cy={950} rx={60} ry={12} fill="none" stroke="#39ff14" strokeWidth="2" opacity="0.4" style={{ filter: 'drop-shadow(0 0 10px #39ff14)' }} />
+          <g className="spin-node" transform="translate(500, 950)">
+            <ellipse cx={0} cy={0} rx={40} ry={8} fill="none" stroke="#39ff14" strokeWidth="1" strokeDasharray="6 8" opacity="0.8" />
           </g>
+          <path d="M 420 950 L 580 950 M 500 935 L 500 965" stroke="#39ff14" strokeWidth="1" opacity="0.3" />
 
-          {/* Intense central spine */}
-          <path d={`M ${grid[0].c.x} ${grid[0].c.y} L ${grid[1].c.x} ${grid[1].c.y} L ${grid[2].c.x} ${grid[2].c.y} L ${grid[3].c.x} ${grid[3].c.y} L ${grid[4].c.x} ${grid[4].c.y} L ${grid[5].c.x} ${grid[5].c.y}`} fill="none" stroke="#ffffff" strokeWidth="3" opacity="0.9" strokeLinejoin="round" />
-        </g>
+          {/* Yggdrasil Energy Veins & Fiber Optics */}
+          {treeVisuals.paths.map((path, idx) => {
+            const isFaded = selectedBranch && selectedBranch.name !== path.branchName && path.branchName !== 'main';
+            const isSelected = selectedBranch && selectedBranch.name === path.branchName;
 
-        {/* Render Branches & Commits */}
-        {branchesData.map((branch) => (
-          <g key={branch.id}>
-            {branch.paths.map((pathStr, i) => (
-              <g key={`${branch.id}-path-${i}`}>
-                {/* Thick aura */}
-                <path d={pathStr} fill="none" stroke={branch.color} strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" filter={branch.glow ? `url(#${branch.glow})` : undefined} opacity={0.3} />
-                {/* Main line - Geometric and sharp */}
-                <path d={pathStr} fill="none" stroke={branch.color} strokeWidth={i === 0 ? "5" : "2"} strokeLinecap="round" strokeLinejoin="round" filter={branch.glow ? `url(#${branch.glow})` : undefined} opacity={0.9} />
-                {/* Core bright center for main branch paths */}
-                {i === 0 && <path d={pathStr} fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity={0.8} />}
+            return (
+              <path
+                key={`ygg-${idx}`}
+                d={path.d}
+                stroke={isSelected ? '#ffffff' : (path.color || '#39ff14')}
+                strokeWidth={path.width + (isSelected && !path.isData ? 2 : 0)}
+                strokeDasharray={path.dash}
+                opacity={isFaded ? path.opacity * 0.1 : path.opacity}
+                className={path.isData ? "data-pulse" : "yggdrasil-path"}
+                style={{ transition: 'all 0.4s ease' }}
+              />
+            );
+          })}
+
+          {/* Cyber Foliage Canopy (High Performance O(1) DOM rendering) */}
+          {Object.entries(treeVisuals.leafGroups || {}).map(([color, groups]) => {
+            const isFaded = selectedBranch && selectedBranch.color !== color && color !== '#39ff14';
+            return (
+              <g key={`leaves-${color}`} stroke={color} strokeWidth="3.5" strokeLinecap="round" style={{ transition: 'opacity 0.4s ease', opacity: isFaded ? 0.1 : 1 }}>
+                {groups.slow && <path d={groups.slow} className="cyber-leaf-slow" opacity={0.6} />}
+                {groups.med && <path d={groups.med} className="cyber-leaf-med" opacity={0.8} />}
+                {groups.fast && <path d={groups.fast} className="cyber-leaf-fast" opacity={0.9} />}
               </g>
-            ))}
+            );
+          })}
 
-            {/* Commits (Nodes) */}
-            {branch.commits.map((commit) => (
-              <GeoNode key={commit.id} cx={commit.x} cy={commit.y} r={commit.r || 16} color={branch.color} filter={branch.glow ? `url(#${branch.glow})` : undefined} />
-            ))}
-          </g>
-        ))}
-
-        {/* Major Intersection Nodes on Trunk */}
-        <GeoNode cx={grid[2].c.x} cy={grid[2].c.y} r={32} color="#4ade80" filter="url(#glow-green)" />
-        <GeoNode cx={grid[4].c.x} cy={grid[4].c.y} r={26} color="#4ade80" filter="url(#glow-green)" />
-
-        {/* Root Commits (at the ends of the roots) */}
-        <GeoNode cx={300} cy={880} r={18} color="#22c55e" filter="url(#glow-green)" />
-        <GeoNode cx={500} cy={880} r={18} color="#22c55e" filter="url(#glow-green)" />
-        <GeoNode cx={700} cy={880} r={18} color="#22c55e" filter="url(#glow-green)" />
-
-        {/* Labels */}
-        <text x="560" y="550" fill="#4ade80" fontSize="16" fontWeight="bold" filter="url(#glow-green)" letterSpacing="3">MAIN</text>
-        <text x="560" y="570" fill="#4ade80" fontSize="16" fontWeight="bold" filter="url(#glow-green)" letterSpacing="3">TRUNK</text>
-        
-        <text x="500" y="820" fill="#94a3b8" fontSize="14" textAnchor="middle" letterSpacing="1">Project Foundation (Commits)</text>
-
-      {/* HTML Overlays for commit labels moved inside SVG for perfect scaling */}
-      {branchesData.map((branch) =>
-        branch.commits.map((commit) => {
-          if (!commit.label) return null;
-          return (
-            <foreignObject
-              key={`label-${commit.id}`}
-              x={commit.x + 15}
-              y={commit.y - 35}
-              width="250"
-              height="60"
-              style={{ overflow: 'visible' }}
-            >
-              <div
-                className="commit-label"
-                style={{
-                  position: 'relative',
-                  display: 'inline-block',
-                  color: branch.color || '#e2e8f0',
-                  background: 'rgba(20, 25, 40, 0.8)',
-                  border: `1px solid ${branch.color ? branch.color + '55' : 'rgba(255, 255, 255, 0.1)'}`,
-                  padding: '6px 12px',
-                  borderRadius: '16px',
-                  fontSize: '12px',
-                  whiteSpace: 'nowrap'
+          {/* High-Tech Circuit Nodes and Branch Labels */}
+          {treeVisuals.labels.map((lbl, idx) => {
+            const isFaded = selectedBranch && selectedBranch.name !== lbl.text && selectedBranch.name !== lbl.branchData?.name;
+            return (
+              <g
+                key={`lbl-${idx}`}
+                transform={`translate(${lbl.x}, ${lbl.y})`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedBranch({ name: lbl.text || lbl.branchData?.name, color: lbl.color, data: lbl.branchData });
                 }}
+                style={{ cursor: 'pointer', pointerEvents: 'auto', transition: 'opacity 0.4s ease', opacity: isFaded ? 0.3 : 1 }}
               >
-                {commit.label}
-              </div>
-            </foreignObject>
-          );
-        })
-      )}
-      
-      {/* Root commit labels */}
-      <foreignObject x="285" y="895" width="100" height="40" style={{ overflow: 'visible' }}>
-        <div className="commit-label" style={{ position: 'relative', color: '#4ade80', background: 'rgba(20, 25, 40, 0.8)', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', display: 'inline-block' }}>ca3f4g</div>
-      </foreignObject>
-      <foreignObject x="485" y="895" width="100" height="40" style={{ overflow: 'visible' }}>
-        <div className="commit-label" style={{ position: 'relative', color: '#4ade80', background: 'rgba(20, 25, 40, 0.8)', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', display: 'inline-block' }}>6d2e1a</div>
-      </foreignObject>
-      <foreignObject x="685" y="895" width="100" height="40" style={{ overflow: 'visible' }}>
-        <div className="commit-label" style={{ position: 'relative', color: '#4ade80', background: 'rgba(20, 25, 40, 0.8)', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', display: 'inline-block' }}>8b1d9c</div>
-      </foreignObject>
 
-      {/* Branch Name Path Labels */}
-      <text x="180" y="290" fill="#4ade80" fontSize="13" fontWeight="bold" letterSpacing="1" filter="url(#glow-green)" transform="rotate(50 180 290)">feat/bioluminescent-map</text>
-      
-      <text x="240" y="380" fill="#4ade80" fontSize="13" fontWeight="bold" letterSpacing="1" filter="url(#glow-green)" transform="rotate(40 240 380)">feat/bluminescent-1</text>
-      
-      <text x="300" y="200" fill="#4ade80" fontSize="13" fontWeight="bold" letterSpacing="1" filter="url(#glow-green)" transform="rotate(50 300 200)">feat/biolouiloper-oranogn</text>
-      
-      <text x="630" y="270" fill="#3b82f6" fontSize="13" fontWeight="bold" letterSpacing="1" filter="url(#glow-cyan)" transform="rotate(-40 630 270)">release/v2.1</text>
+                {/* Huge Invisible Hitbox for easy clicking */}
+                <circle cx={0} cy={0} r={32} fill="transparent" />
 
-      {/* Upper Canopy Labels */}
-      <foreignObject x="650" y="100" width="250" height="60" style={{ overflow: 'visible' }}>
-        <div className="commit-label" style={{ position: 'relative', color: '#a78bfa', fontSize: '14px', border: 'none', background: 'rgba(20, 25, 40, 0.6)', padding: '8px 16px', borderRadius: '20px', transform: 'none', left: 'auto', top: 'auto', display: 'inline-block' }}>Project Overview (Canopy)</div>
-      </foreignObject>
-      <foreignObject x="850" y="70" width="150" height="40" style={{ overflow: 'visible' }}>
-        <div className="commit-label" style={{ position: 'relative', color: '#94a3b8', fontSize: '12px', border: 'none', transform: 'none', left: 'auto', top: 'auto', display: 'inline-block' }}>3 conflict(s)</div>
-      </foreignObject>
+                {lbl.isNode && (
+                  <g className="tech-node" style={{ filter: `drop-shadow(0 0 8px ${lbl.color})` }}>
+                    <circle cx={0} cy={0} r={4.5} fill="#0a0f1a" stroke={lbl.color} strokeWidth="1.5" />
+                    <circle cx={0} cy={0} r={1.5} fill={lbl.color} />
+                    {/* Cyber brackets */}
+                    <path d="M -7 -3 L -7 -7 L -3 -7" fill="none" stroke={lbl.color} strokeWidth="1" opacity="0.8" />
+                    <path d="M 7 3 L 7 7 L 3 7" fill="none" stroke={lbl.color} strokeWidth="1" opacity="0.8" />
+                  </g>
+                )}
+
+                {/* Horizontal readable text with heavy outline for perfect contrast */}
+                {lbl.text && (
+                  <g transform="translate(14, 4)">
+                    <text className="yggdrasil-label" stroke="#0a0f1a" strokeWidth="4" strokeLinejoin="round" style={{ fontWeight: 800, fontSize: '14px' }}>
+                      {lbl.text}
+                    </text>
+                    <text className="yggdrasil-label" fill="#fff" style={{ fontWeight: 800, fontSize: '14px', textShadow: `0 0 8px ${lbl.color}, 0 0 16px ${lbl.color}` }}>
+                      {lbl.text}
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
         </g>
       </svg>
 
-      {/* Zoom Controls */}
-      <div style={{ position: 'absolute', bottom: '170px', right: '32px', display: 'flex', flexDirection: 'column', gap: '16px', pointerEvents: 'auto', zIndex: 10 }}>
-        <div style={{ background: 'rgba(10, 14, 25, 0.6)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-          <button onClick={handleZoomIn} style={{ background: 'transparent', border: 'none', color: '#e2e8f0', padding: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <ZoomIn size={16} />
-          </button>
-          <div style={{ height: '1px', background: 'rgba(255, 255, 255, 0.05)', width: '100%' }}></div>
-          <button onClick={handleZoomOut} style={{ background: 'transparent', border: 'none', color: '#e2e8f0', padding: '12px', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <ZoomOut size={16} />
-          </button>
+      {/* Controls Overlay */}
+      <div style={{ position: 'absolute', bottom: '40px', right: '40px', display: 'flex', flexDirection: 'column', gap: '16px', pointerEvents: 'auto', zIndex: 10 }}>
+        <div style={{ background: 'rgba(10, 15, 26, 0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(57, 255, 20, 0.3)', borderRadius: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <button onClick={() => setTransform(p => ({ ...p, scale: Math.min(4, p.scale + 0.2) }))} style={{ background: 'transparent', border: 'none', color: '#39ff14', padding: '12px', cursor: 'pointer' }}><ZoomIn size={16} /></button>
+          <div style={{ height: '1px', background: 'rgba(57, 255, 20, 0.3)', width: '100%' }}></div>
+          <button onClick={() => setTransform(p => ({ ...p, scale: Math.max(0.3, p.scale - 0.2) }))} style={{ background: 'transparent', border: 'none', color: '#39ff14', padding: '12px', cursor: 'pointer' }}><ZoomOut size={16} /></button>
         </div>
-        <button onClick={handleZoomReset} style={{ background: 'rgba(10, 14, 25, 0.6)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.05)', color: '#e2e8f0', padding: '10px 16px', borderRadius: '12px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', letterSpacing: '1px' }}>
-          <RotateCcw size={14} />
-          RESET
+        <button onClick={() => setTransform({ x: 0, y: 0, scale: 1 })} style={{ background: 'rgba(10, 15, 26, 0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(57, 255, 20, 0.3)', color: '#39ff14', padding: '10px', borderRadius: '12px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}>
+          <RotateCcw size={16} />
         </button>
       </div>
+
+      {/* Sci-Fi Holographic Tooltip */}
+      {selectedBranch && (
+        <div style={{
+          position: 'absolute',
+          top: '24px',
+          right: '24px',
+          width: '320px',
+          padding: '24px',
+          background: 'rgba(10, 15, 26, 0.85)',
+          backdropFilter: 'blur(16px)',
+          border: `1px solid ${selectedBranch.color}80`,
+          borderLeft: `4px solid ${selectedBranch.color}`,
+          borderRadius: '12px',
+          color: '#fff',
+          boxShadow: `0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px ${selectedBranch.color}30`,
+          pointerEvents: 'auto',
+          fontFamily: 'Inter, sans-serif',
+          zIndex: 100,
+          animation: 'fade-in 0.3s ease-out forwards'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '18px', color: selectedBranch.color, textShadow: `0 0 10px ${selectedBranch.color}` }}>
+                {selectedBranch.name}
+              </h3>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#8892b0' }}>Branch Evolution & Analytics</p>
+            </div>
+            <button
+              onClick={() => setSelectedBranch(null)}
+              style={{ background: 'transparent', border: 'none', color: '#8892b0', cursor: 'pointer', fontSize: '16px', padding: '4px' }}
+            >✕</button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px', background: 'rgba(0,0,0,0.3)', padding: '12px', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
+              <span style={{ color: '#8892b0' }}>Health Status</span>
+              <span style={{ color: selectedBranch.name.includes('conflict') ? '#ff3366' : '#39ff14', fontWeight: 600 }}>
+                {selectedBranch.name.includes('conflict') ? '⚠️ Requires Review' : '● Healthy Sync'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '8px' }}>
+              <span style={{ color: '#8892b0' }}>Recent Commits</span>
+              <span style={{ color: '#e2e8f0' }}>{Math.floor(Math.random() * 8) + 2} new changes</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#8892b0' }}>Last Active</span>
+              <span style={{ color: '#e2e8f0' }}>Just now</span>
+            </div>
+          </div>
+
+          <button style={{
+            marginTop: '20px',
+            width: '100%',
+            padding: '10px',
+            background: `${selectedBranch.color}15`,
+            border: `1px solid ${selectedBranch.color}60`,
+            color: selectedBranch.color,
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 600,
+            transition: 'all 0.2s',
+            textShadow: `0 0 8px ${selectedBranch.color}80`
+          }}
+            onMouseOver={(e) => e.currentTarget.style.background = `${selectedBranch.color}30`}
+            onMouseOut={(e) => e.currentTarget.style.background = `${selectedBranch.color}15`}
+          >
+            Analyze Branch Diff
+          </button>
+
+          <style>{`
+             @keyframes fade-in {
+               from { opacity: 0; transform: translateY(-10px); }
+               to { opacity: 1; transform: translateY(0); }
+             }
+           `}</style>
+        </div>
+      )}
     </div>
   );
 };

@@ -6,10 +6,11 @@ import Success from './components/Auth/Success'
 import DatabaseDesigner from './components/DatabaseDesigner/DatabaseDesigner'
 import DeepLint from './components/DeepLint/DeepLint'
 import AIPoc from './components/AIPoc/AIPoc'
+import BranchTree from './components/BranchTree/BranchTree'
 import './App.css'
 
 export default function App() {
-  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'workspace' | 'deeplint' | 'aipoc'>(() => {
+  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree'>(() => {
     const saved = localStorage.getItem('authSession')
     return saved === 'active' ? 'workspace' : 'login'
   })
@@ -18,9 +19,9 @@ export default function App() {
   const [registerConflict, setRegisterConflict] = useState<boolean>(false)
   const [notification, setNotification] = useState<string | null>(null)
 
-  const handleSetAuthScreen = (screen: 'login' | 'register' | 'forgot' | 'success' | 'workspace' | 'deeplint' | 'aipoc') => {
+  const handleSetAuthScreen = (screen: 'login' | 'register' | 'forgot' | 'success' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree') => {
     setAuthScreen(screen)
-    if (screen === 'workspace') {
+    if (screen === 'workspace' || screen === 'branchtree') {
       localStorage.setItem('authSession', 'active')
     } else if (screen === 'login') {
       localStorage.removeItem('authSession')
@@ -107,6 +108,10 @@ export default function App() {
 
       {authScreen === 'aipoc' && (
         <AIPoc onBack={() => handleSetAuthScreen('workspace')} />
+      )}
+
+      {authScreen === 'branchtree' && (
+        <BranchTree />
       )}
     </div>
   )
