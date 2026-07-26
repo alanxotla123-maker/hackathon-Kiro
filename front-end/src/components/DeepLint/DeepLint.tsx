@@ -7,7 +7,8 @@ import {
   TrendingDown, 
   GitBranch,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Bell
 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import './DeepLint.css';
@@ -154,7 +155,15 @@ ${rawText.slice(0, 5000)}`;
     <div className="deeplint-container">
       {/* Sidebar */}
       <aside className="deeplint-sidebar">
-        <div className="sidebar-header">
+        <div className="master-sidebar-logo-group" style={{ cursor: 'pointer', borderBottom: '1px solid #131924' }} onClick={onBack}>
+          <ArrowLeft size={16} style={{ color: '#94a3b8', marginRight: '8px' }} />
+          <div className="master-logo-text-group">
+            <span className="master-logo-text" style={{ fontSize: '13px' }}>DeepLint</span>
+            <span className="master-logo-sub">code-optimizer</span>
+          </div>
+        </div>
+
+        <div className="sidebar-header" style={{ marginTop: '8px' }}>
           <span className="sidebar-title">FILE EXPLORER</span>
           <ChevronDown size={14} className="text-secondary" />
         </div>
@@ -181,16 +190,7 @@ ${rawText.slice(0, 5000)}`;
 
       {/* Main Content */}
       <main className="deeplint-main">
-        <header className="main-header">
-          <div className="header-title-group">
-            <button className="deeplint-back-btn" onClick={onBack}>
-              <ArrowLeft size={20} />
-            </button>
-            <div>
-              <h1 className="header-title">DeepLint - Code Optimization</h1>
-              <p className="header-subtitle">Real-time AI-powered structural analysis and performance refactoring.</p>
-            </div>
-          </div>
+        <header className="master-top-header">
           <div className="header-actions">
             <span className="dropdown-label">ELEGIR REPOSITORIO A EVALUAR</span>
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -206,10 +206,29 @@ ${rawText.slice(0, 5000)}`;
               </button>
             </div>
           </div>
+
+          <div className="master-header-right">
+            <button className="icon-btn notification-bell">
+              <Bell size={16} />
+              <span className="bell-badge"></span>
+            </button>
+            <div className="master-user-profile">
+              <div className="profile-info">
+                <span className="profile-name">Alan Kiro</span>
+                <span className="profile-role">Lead Engineer</span>
+              </div>
+              <img 
+                src={localStorage.getItem('profileImageUrl') || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80"} 
+                alt="Profile Avatar" 
+                className="master-profile-avatar"
+              />
+            </div>
+          </div>
         </header>
 
-        <div className="split-view">
-          {/* Left Pane - Original */}
+        <div className="deeplint-content-wrapper">
+          <div className="split-view">
+            {/* Left Pane - Original */}
           <div className="code-pane">
             <div className="pane-header">
               <div className="pane-title">
@@ -283,6 +302,7 @@ ${rawText.slice(0, 5000)}`;
             <div className="metric-value green">
               {metrics.aiOptimized} <TrendingDown size={18} className="metric-icon" />
             </div>
+          </div>
           </div>
         </div>
       </main>
