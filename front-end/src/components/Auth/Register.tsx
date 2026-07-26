@@ -18,10 +18,10 @@ export default function Register({
   setRegisterConflict,
   setAuthScreen,
   showNotification
-}: RegisterProps) {
-  const [showPassword, setShowPassword] = useState(false)
-
-  const handleRegister = async () => {
+  }: RegisterProps) {
+    const [showPassword, setShowPassword] = useState(false)
+  
+    const handleRegister = async () => {
     if (!authInputs.fullName || !authInputs.username || !authInputs.password) {
       showNotification('Por favor completa todos los campos')
       return

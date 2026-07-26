@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { 
   Shield, 
   MapPin, 
@@ -31,6 +31,36 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [email, setEmail] = useState(`${userName.toLowerCase().replace(/\s+/g, '')}@devsync.io`)
   const [workstationId, setWorkstationId] = useState('NODE_742_X_DEV')
   const githubUser = `${userName.toLowerCase().replace(/\s+/g, '_')}-official`
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [profileImageUrl, setProfileImageUrl] = useState(localStorage.getItem('profileImageUrl') || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80")
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const formData = new FormData();
+      formData.append('avatar', file);
+      formData.append('email', email);
+
+      showNotification('Subiendo foto a S3...');
+      try {
+        const response = await fetch('http://localhost:3000/api/upload/avatar', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setProfileImageUrl(data.profileImage);
+          localStorage.setItem('profileImageUrl', data.profileImage);
+          showNotification('¡Foto de perfil actualizada en S3!');
+        } else {
+          showNotification('Error: ' + data.error);
+        }
+      } catch (err) {
+        showNotification('Fallo al subir la imagen');
+        console.error(err);
+      }
+    }
+  }
 
   const handleSaveChanges = () => {
     showNotification('Configuración guardada correctamente!')
@@ -80,7 +110,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
               {/* Photo Box container */}
               <div style={{ position: 'relative', width: '100px', height: '100px' }}>
                 <img 
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80" 
+                  src={profileImageUrl} 
                   alt="Avatar" 
                   style={{
                     width: '100px',
@@ -104,7 +134,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                   cursor: 'pointer',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
                   border: '2px solid #0d1117'
-                }} title="Change Photo">
+                }} title="Change Photo" onClick={() => fileInputRef.current?.click()}>
                   <Camera size={12} />
                 </div>
               </div>
@@ -114,8 +144,15 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 <span style={{ fontSize: '11px', color: '#64748b' }}>Lead Engineer @ SystemCore</span>
               </div>
 
+              <input 
+                type="file" 
+                accept="image/*"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={handlePhotoUpload}
+              />
               <button 
-                onClick={() => showNotification('Uploading new photo...')}
+                onClick={() => fileInputRef.current?.click()}
                 style={{
                   width: '100%',
                   padding: '8px 12px',
@@ -359,7 +396,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
           {/* Avatar Container */}
           <div style={{ position: 'relative' }}>
             <img 
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80" 
+              src={profileImageUrl} 
               alt="User Profile" 
               style={{
                 width: '88px',

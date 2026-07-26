@@ -179,21 +179,18 @@ Devuelve la respuesta ÚNICAMENTE como un array de objetos JSON con esta estruct
 
   return (
     <div className="stackagent-container">
-      {/* Header */}
-      <header className="stackagent-header">
-        <div className="stackagent-title-group">
-          <ArrowLeft size={18} className="back-icon" onClick={onBack} />
-          <div className="title-text">
-            <h1>StackAgent</h1>
-            <span className="subtitle">WORK DISTRIBUTOR</span>
-          </div>
-        </div>
-      </header>
-
       <div className="stackagent-content">
         {/* Left Sidebar */}
         <aside className="stackagent-sidebar">
-          {/* System Summary */}
+          <div className="master-sidebar-logo-group" style={{ cursor: 'pointer', borderBottom: '1px solid #131924' }} onClick={onBack}>
+            <ArrowLeft size={16} style={{ color: '#94a3b8', marginRight: '8px' }} />
+            <div className="master-logo-text-group">
+              <span className="master-logo-text" style={{ fontSize: '13px' }}>StackAgent</span>
+              <span className="master-logo-sub">work-distributor</span>
+            </div>
+          </div>
+          <div style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', flex: 1 }}>
+            {/* System Summary */}
           <div className="section-block">
             <h2 className="section-title">Resumen del sistema</h2>
             <div className="textarea-wrapper">
@@ -265,7 +262,8 @@ Devuelve la respuesta ÚNICAMENTE como un array de objetos JSON con esta estruct
                 GENERAR / ACTUALIZAR TABLÓN
               </div>
             )}
-          </button>
+            </button>
+          </div>
         </aside>
 
         {/* Right Board Area */}

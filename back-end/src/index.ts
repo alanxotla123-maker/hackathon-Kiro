@@ -9,6 +9,7 @@ import branchSyncRouter from "./modules/branch-sync/branchSyncRouter.js";
 import docGeneratorRouter from "./modules/doc-generator/docGeneratorRouter.js";
 import codeReviewRouter from "./modules/code-review/codeReviewRouter.js";
 import authRouter from "./modules/auth/authRouter.js";
+import uploadRouter from "./modules/upload/uploadRouter.js";
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use("/api/task-allocator", taskAllocatorRouter);
 app.use("/api/branch-sync", branchSyncRouter);
 app.use("/api/doc-generator", docGeneratorRouter);
 app.use("/api/code-review", codeReviewRouter);
+app.use("/api/upload", uploadRouter);
 
 // Start server
 app.listen(PORT, () => {

@@ -866,158 +866,258 @@ export default function DatabaseDesigner({
                   {isSplitView ? 'CLOSE CODE EDITOR' : 'OPEN CODE EDITOR'}
                 </button>
 
-                <div className="sidebar-menu" style={{ padding: 0, marginTop: '12px' }}>
-                  <div
-                    className={`menu-item ${activeMenuTab === 'TABLES' ? 'active' : ''}`}
-                    onClick={() => setActiveMenuTab('TABLES')}
-                  >
-                    <Grid size={14} />
-                    TABLES ({filteredTables.length})
-                  </div>
-                  <div
-                    className={`menu-item ${activeMenuTab === 'RELATIONS' ? 'active' : ''}`}
-                    onClick={() => setActiveMenuTab('RELATIONS')}
-                  >
-                    <Link2 size={14} />
-                    RELATIONS
-                  </div>
-                  <div
-                    className={`menu-item ${activeMenuTab === 'INDICES' ? 'active' : ''}`}
-                    onClick={() => setActiveMenuTab('INDICES')}
-                  >
-                    <Key size={14} />
-                    INDICES
-                  </div>
-                </div>
-
-                {activeMenuTab === 'TABLES' && (
-                  <div className="sidebar-content-area" style={{ maxHeight: '280px', overflowY: 'auto' }}>
-                    <span className="sidebar-list-title">Tablas ({filteredTables.length})</span>
-                    {filteredTables.map(t => (
-                      <div
-                        key={t.id}
-                        className={`sidebar-list-item ${selectedTableId === t.id ? 'selected' : ''}`}
-                        onClick={() => setSelectedTableId(t.id)}
-                      >
-                        <span className="sidebar-item-name">
-                          <Database size={12} style={{ color: 'var(--accent-blue)', marginRight: '6px' }} />
-                          {t.name}
-                        </span>
-                        <span className="sidebar-item-meta">{t.columns.length} cols</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {activeMenuTab === 'RELATIONS' && (
-                  <div className="sidebar-content-area" style={{ maxHeight: '280px', overflowY: 'auto' }}>
-                    <span className="sidebar-list-title">Relaciones ({relationLines.length})</span>
-                    {relationLines.map((line) => (
-                      <div key={line.id} className="sidebar-list-item" onClick={() => setSelectedTableId(line.targetTableId)}>
-                        <span className="sidebar-item-name" style={{ fontSize: '10px' }}>
-                          <Link2 size={12} style={{ color: 'var(--accent-green)', marginRight: '6px' }} />
-                          {line.id.replace('_to_', ' ➜ ').replace(/_[a-zA-Z0-9]+_/g, '.')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {activeMenuTab === 'INDICES' && (
-                  <div className="sidebar-content-area" style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <span className="sidebar-list-title">Índices ({customIndices.length})</span>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {customIndices.map(idx => (
-                        <div key={idx.id} className="sidebar-list-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span className="sidebar-item-name">
-                            <Key size={12} style={{ color: 'var(--accent-purple)', marginRight: '6px' }} />
-                            {idx.name}
-                          </span>
-                          <button
-                            onClick={() => {
-                              setCustomIndices(prev => prev.filter(i => i.id !== idx.id))
-                              showNotification("Índice eliminado")
-                            }}
-                            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '10px' }}
-                          >
-                            ✕
-                          </button>
+                {/* Conditional Sidebar Content: Export Settings OR Tables/Relations/Indices */}
+                {(isSplitView && splitViewMode === 'export') ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px', padding: '0 4px' }}>
+                    <div>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>Target Database</span>
+                      {['PostgreSQL', 'MySQL', 'SQLite', 'MongoDB', 'Prisma ORM'].map(db => (
+                        <div
+                          key={db}
+                          onClick={() => setTargetDb(db)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 10px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            marginBottom: '2px',
+                            fontSize: '12px',
+                            fontWeight: targetDb === db ? 600 : 400,
+                            color: targetDb === db ? '#38bdf8' : '#94a3b8',
+                            background: targetDb === db ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
+                            border: targetDb === db ? '1px solid rgba(56, 189, 248, 0.2)' : '1px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Database size={13} />
+                          {db}
+                          {targetDb === db && db === 'PostgreSQL' && (
+                            <span style={{ marginLeft: 'auto', fontSize: '9px', padding: '1px 5px', borderRadius: '3px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>v15</span>
+                          )}
                         </div>
                       ))}
                     </div>
 
-                    <div className="index-creator-form" style={{ marginTop: '12px', borderTop: '1px dashed #131924', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span className="sidebar-list-title" style={{ fontSize: '10px' }}>NUEVO ÍNDICE</span>
+                    <div style={{ borderTop: '1px solid #131924', paddingTop: '16px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', marginBottom: '12px', display: 'block' }}>Export Settings</span>
 
-                      <select
-                        className="form-select"
-                        style={{ width: '100%', padding: '4px', fontSize: '11px', background: '#0d1117', border: '1px solid #1e293b', color: '#e2e8f0', borderRadius: '4px' }}
-                        value={selectedIndexTableId}
-                        onChange={(e) => {
-                          setSelectedIndexTableId(e.target.value)
-                          const tbl = tables.find(t => t.id === e.target.value)
-                          if (tbl && tbl.columns.length > 0) {
-                            setSelectedIndexColId(tbl.columns[0].id)
-                          }
-                        }}
+                      <div style={{ marginBottom: '12px' }}>
+                        <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500, marginBottom: '4px', display: 'block', textTransform: 'uppercase' }}>Schema Name</label>
+                        <input
+                          type="text"
+                          value={schemaName}
+                          onChange={(e) => setSchemaName(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '6px 10px',
+                            background: '#0d1117',
+                            border: '1px solid #1e293b',
+                            borderRadius: '4px',
+                            color: '#e2e8f0',
+                            fontSize: '12px',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+
+                      {[
+                        { label: 'Include DROP statements', checked: includeDrop, onChange: setIncludeDrop },
+                        { label: 'Generate relationships (FK)', checked: generateFK, onChange: setGenerateFK },
+                        { label: 'Include seed data', checked: includeSeed, onChange: setIncludeSeed },
+                      ].map((setting) => (
+                        <label
+                          key={setting.label}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '6px 0',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            color: '#cbd5e1'
+                          }}
+                        >
+                          <div
+                            onClick={() => setting.onChange(!setting.checked)}
+                            style={{
+                              width: '16px',
+                              height: '16px',
+                              borderRadius: '4px',
+                              border: setting.checked ? '2px solid #38bdf8' : '2px solid #475569',
+                              background: setting.checked ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.15s ease',
+                              flexShrink: 0
+                            }}
+                          >
+                            {setting.checked && <Check size={10} style={{ color: '#38bdf8' }} />}
+                          </div>
+                          {setting.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="sidebar-menu" style={{ padding: 0, marginTop: '12px' }}>
+                      <div
+                        className={`menu-item ${activeMenuTab === 'TABLES' ? 'active' : ''}`}
+                        onClick={() => setActiveMenuTab('TABLES')}
                       >
-                        <option value="">Selecciona Tabla...</option>
-                        {tables.map(t => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
+                        <Grid size={14} />
+                        TABLES ({filteredTables.length})
+                      </div>
+                      <div
+                        className={`menu-item ${activeMenuTab === 'RELATIONS' ? 'active' : ''}`}
+                        onClick={() => setActiveMenuTab('RELATIONS')}
+                      >
+                        <Link2 size={14} />
+                        RELATIONS
+                      </div>
+                      <div
+                        className={`menu-item ${activeMenuTab === 'INDICES' ? 'active' : ''}`}
+                        onClick={() => setActiveMenuTab('INDICES')}
+                      >
+                        <Key size={14} />
+                        INDICES
+                      </div>
+                    </div>
 
-                      {selectedIndexTableId && (() => {
-                        const tbl = tables.find(t => t.id === selectedIndexTableId)
-                        if (!tbl) return null
-                        return (
+                    {activeMenuTab === 'TABLES' && (
+                      <div className="sidebar-content-area" style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                        <span className="sidebar-list-title">Tablas ({filteredTables.length})</span>
+                        {filteredTables.map(t => (
+                          <div
+                            key={t.id}
+                            className={`sidebar-list-item ${selectedTableId === t.id ? 'selected' : ''}`}
+                            onClick={() => setSelectedTableId(t.id)}
+                          >
+                            <span className="sidebar-item-name">
+                              <Database size={12} style={{ color: 'var(--accent-blue)', marginRight: '6px' }} />
+                              {t.name}
+                            </span>
+                            <span className="sidebar-item-meta">{t.columns.length} cols</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {activeMenuTab === 'RELATIONS' && (
+                      <div className="sidebar-content-area" style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                        <span className="sidebar-list-title">Relaciones ({relationLines.length})</span>
+                        {relationLines.map((line) => (
+                          <div key={line.id} className="sidebar-list-item" onClick={() => setSelectedTableId(line.targetTableId)}>
+                            <span className="sidebar-item-name" style={{ fontSize: '10px' }}>
+                              <Link2 size={12} style={{ color: 'var(--accent-green)', marginRight: '6px' }} />
+                              {line.id.replace('_to_', ' ➜ ').replace(/_[a-zA-Z0-9]+_/g, '.')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {activeMenuTab === 'INDICES' && (
+                      <div className="sidebar-content-area" style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <span className="sidebar-list-title">Índices ({customIndices.length})</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {customIndices.map(idx => (
+                            <div key={idx.id} className="sidebar-list-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span className="sidebar-item-name">
+                                <Key size={12} style={{ color: 'var(--accent-purple)', marginRight: '6px' }} />
+                                {idx.name}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  setCustomIndices(prev => prev.filter(i => i.id !== idx.id))
+                                  showNotification("Índice eliminado")
+                                }}
+                                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '10px' }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="index-creator-form" style={{ marginTop: '12px', borderTop: '1px dashed #131924', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <span className="sidebar-list-title" style={{ fontSize: '10px' }}>NUEVO ÍNDICE</span>
+
                           <select
                             className="form-select"
                             style={{ width: '100%', padding: '4px', fontSize: '11px', background: '#0d1117', border: '1px solid #1e293b', color: '#e2e8f0', borderRadius: '4px' }}
-                            value={selectedIndexColId}
-                            onChange={(e) => setSelectedIndexColId(e.target.value)}
+                            value={selectedIndexTableId}
+                            onChange={(e) => {
+                              setSelectedIndexTableId(e.target.value)
+                              const tbl = tables.find(t => t.id === e.target.value)
+                              if (tbl && tbl.columns.length > 0) {
+                                setSelectedIndexColId(tbl.columns[0].id)
+                              }
+                            }}
                           >
-                            <option value="">Selecciona Columna...</option>
-                            {tbl.columns.map(c => (
-                              <option key={c.id} value={c.id}>{c.name}</option>
+                            <option value="">Selecciona Tabla...</option>
+                            {tables.map(t => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
                             ))}
                           </select>
-                        )
-                      })()}
 
-                      <button
-                        className="btn-new-table"
-                        style={{ width: '100%', padding: '6px', fontSize: '11px', marginTop: '4px' }}
-                        onClick={() => {
-                          const tbl = tables.find(t => t.id === selectedIndexTableId)
-                          const col = tbl?.columns.find(c => c.id === selectedIndexColId)
-                          if (tbl && col) {
-                            const idxName = `idx_${tbl.name.toLowerCase()}_${col.name.toLowerCase()}`
-                            if (customIndices.some(i => i.name === idxName)) {
-                              showNotification("El índice ya existe")
-                              return
-                            }
-                            setCustomIndices(prev => [
-                              ...prev,
-                              {
-                                id: `idx_${Date.now()}`,
-                                name: idxName,
-                                tableName: tbl.name.toLowerCase(),
-                                columnName: col.name.toLowerCase()
+                          {selectedIndexTableId && (() => {
+                            const tbl = tables.find(t => t.id === selectedIndexTableId)
+                            if (!tbl) return null
+                            return (
+                              <select
+                                className="form-select"
+                                style={{ width: '100%', padding: '4px', fontSize: '11px', background: '#0d1117', border: '1px solid #1e293b', color: '#e2e8f0', borderRadius: '4px' }}
+                                value={selectedIndexColId}
+                                onChange={(e) => setSelectedIndexColId(e.target.value)}
+                              >
+                                <option value="">Selecciona Columna...</option>
+                                {tbl.columns.map(c => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                            )
+                          })()}
+
+                          <button
+                            className="btn-new-table"
+                            style={{ width: '100%', padding: '6px', fontSize: '11px', marginTop: '4px' }}
+                            onClick={() => {
+                              const tbl = tables.find(t => t.id === selectedIndexTableId)
+                              const col = tbl?.columns.find(c => c.id === selectedIndexColId)
+                              if (tbl && col) {
+                                const idxName = `idx_${tbl.name.toLowerCase()}_${col.name.toLowerCase()}`
+                                if (customIndices.some(i => i.name === idxName)) {
+                                  showNotification("El índice ya existe")
+                                  return
+                                }
+                                setCustomIndices(prev => [
+                                  ...prev,
+                                  {
+                                    id: `idx_${Date.now()}`,
+                                    name: idxName,
+                                    tableName: tbl.name.toLowerCase(),
+                                    columnName: col.name.toLowerCase()
+                                  }
+                                ])
+                                showNotification(`Índice ${idxName} creado!`)
+                                setSelectedIndexTableId('')
+                                setSelectedIndexColId('')
+                              } else {
+                                showNotification("Selecciona tabla y columna")
                               }
-                            ])
-                            showNotification(`Índice ${idxName} creado!`)
-                            setSelectedIndexTableId('')
-                            setSelectedIndexColId('')
-                          } else {
-                            showNotification("Selecciona tabla y columna")
-                          }
-                        }}
-                      >
-                        Crear Índice
-                      </button>
-                    </div>
-                  </div>
+                            }}
+                          >
+                            Crear Índice
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -1111,16 +1211,10 @@ export default function DatabaseDesigner({
       {/* Main Container Area */}
       <div className="master-main-container">
         {/* Top Search & Profile Header */}
-        {activeMasterTab !== 'docify' && (
+        {true && (
           <header className="master-top-header">
-            <div className="master-search-bar">
-              <Search size={14} className="search-icon" />
-              <input
-                type="text"
-                placeholder="Search projects, schemas, or docs..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <div className="master-search-bar" style={{ visibility: 'hidden' }}>
+              {/* Search bar removed as per user request */}
             </div>
 
             <div className="master-header-right">
@@ -1137,7 +1231,7 @@ export default function DatabaseDesigner({
                   <span className="profile-role">Lead Engineer</span>
                 </div>
                 <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80"
+                  src={localStorage.getItem('profileImageUrl') || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80"}
                   alt="Profile Avatar"
                   className="master-profile-avatar"
                 />
@@ -1147,7 +1241,7 @@ export default function DatabaseDesigner({
         )}
 
         {/* Master Content Area switcher */}
-        <main className="master-content-body">
+        <main className="master-content-body" style={(activeMasterTab === 'bandwidth' || activeMasterTab === 'docify') ? { overflow: 'visible' } : {}}>
           {activeMasterTab === 'home' && (
             <DashboardHome
               onNavigateToBlueprint={() => setActiveMasterTab('blueprint')}
@@ -1160,16 +1254,29 @@ export default function DatabaseDesigner({
 
               {/* Internal header for blueprint actions (Save, Export, Split View) */}
               <div className="blueprint-sub-header">
-                <div className="sub-header-left">
-                  <span className="workspace-title-label">Database Blueprint / visual-schema</span>
-                </div>
-                <div className="sub-header-right">
-                  <button className="icon-btn" title="Share Project" onClick={() => showNotification('Sharing link copied!')}>
-                    <Share2 size={15} />
-                  </button>
-                  <button className="icon-btn" title="Project Settings" onClick={() => showNotification('Settings menu')}>
-                    <Settings size={15} />
-                  </button>
+                {/* sub-header-left removed as per request */}
+                <div className="sub-header-right" style={{ marginLeft: 'auto' }}>
+                  {isSplitView && splitViewMode === 'export' && (
+                    <>
+                      <button
+                        onClick={() => copyToClipboard(generateExportSQL())}
+                        className="btn-secondary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        {copied ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
+                        Copy to Clipboard
+                      </button>
+                      <button
+                        onClick={handleDownloadSQL}
+                        className="btn-secondary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }}
+                      >
+                        <Download size={13} />
+                        Download .sql
+                      </button>
+                      <div style={{ width: '1px', height: '16px', background: '#334155', margin: '0 4px' }}></div>
+                    </>
+                  )}
                   <button
                     className="btn-secondary"
                     style={{
@@ -1192,28 +1299,7 @@ export default function DatabaseDesigner({
                     <Code size={13} />
                     Split View
                   </button>
-                  <button className="btn-secondary" onClick={handleOpenSaveDialog} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Save size={13} />
-                    Save
-                  </button>
-                  <button
-                    className="btn-primary"
-                    style={{
-                      backgroundColor: (isSplitView && splitViewMode === 'export') ? 'rgba(16, 185, 129, 0.2)' : undefined,
-                      borderColor: (isSplitView && splitViewMode === 'export') ? '#10b981' : undefined,
-                    }}
-                    onClick={() => {
-                      if (isSplitView && splitViewMode === 'export') {
-                        setIsSplitView(false)
-                      } else {
-                        setIsSplitView(true)
-                        setSplitViewMode('export')
-                      }
-                    }}
-                  >
-                    <Download size={14} />
-                    Export
-                  </button>
+                  {/* Save and Export buttons removed as per request */}
                 </div>
               </div>
 
@@ -1309,198 +1395,15 @@ export default function DatabaseDesigner({
 
                 {isSplitView && splitViewMode === 'export' && (
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                    {/* Export Header */}
-                    <div className="macos-header" style={{ userSelect: 'none' }}>
-                      <div className="macos-left" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div
-                          onClick={() => setIsSplitView(false)}
-                          style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444', cursor: 'pointer', transition: 'opacity 0.2s', position: 'relative' }}
-                          title="Cerrar y volver al canvas"
-                          className="macos-dot-close"
-                        />
-                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b', opacity: 0.8 }} />
-                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#10b981', opacity: 0.8 }} />
-                        <span className="macos-title" style={{ marginLeft: '12px' }}>Script Generator</span>
-                      </div>
-                      <div className="macos-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button className="macos-action-btn active" style={{ cursor: 'default' }}>Export</button>
-                        <button className="macos-action-btn" onClick={() => { setSplitViewMode('dsl') }}>DSL</button>
-                        <button
-                          className="macos-action-btn"
-                          onClick={() => setIsSplitView(false)}
-                          style={{
-                            background: 'rgba(239, 68, 68, 0.1)',
-                            border: '1px solid rgba(239, 68, 68, 0.2)',
-                            color: '#ef4444',
-                            borderRadius: '4px',
-                            padding: '3px 8px',
-                            fontSize: '11px',
-                            marginLeft: '8px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Volver al Canvas
-                        </button>
-                      </div>
-                    </div>
+                    {/* Export Header removed as per user request */}
 
                     {/* Export Body */}
                     <div style={{ display: 'flex', flexDirection: 'row', flex: 1, overflow: 'hidden' }}>
-                      {/* Left: Target DB & Settings */}
-                      <div style={{ width: '220px', borderRight: '1px solid #1e293b', display: 'flex', flexDirection: 'column', padding: '16px 12px', gap: '16px', overflowY: 'auto', background: '#0a0f18' }}>
-                        <div>
-                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>Target Database</span>
-                          {['PostgreSQL', 'MySQL', 'SQLite', 'MongoDB', 'Prisma ORM'].map(db => (
-                            <div
-                              key={db}
-                              onClick={() => setTargetDb(db)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '8px 10px',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                marginBottom: '2px',
-                                fontSize: '12px',
-                                fontWeight: targetDb === db ? 600 : 400,
-                                color: targetDb === db ? '#38bdf8' : '#94a3b8',
-                                background: targetDb === db ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
-                                border: targetDb === db ? '1px solid rgba(56, 189, 248, 0.2)' : '1px solid transparent',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              <Database size={13} />
-                              {db}
-                              {targetDb === db && db === 'PostgreSQL' && (
-                                <span style={{ marginLeft: 'auto', fontSize: '9px', padding: '1px 5px', borderRadius: '3px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>v15</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-
-                        <div style={{ borderTop: '1px solid #131924', paddingTop: '16px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', marginBottom: '12px', display: 'block' }}>Export Settings</span>
-
-                          <div style={{ marginBottom: '12px' }}>
-                            <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500, marginBottom: '4px', display: 'block', textTransform: 'uppercase' }}>Schema Name</label>
-                            <input
-                              type="text"
-                              value={schemaName}
-                              onChange={(e) => setSchemaName(e.target.value)}
-                              style={{
-                                width: '100%',
-                                padding: '6px 10px',
-                                background: '#0d1117',
-                                border: '1px solid #1e293b',
-                                borderRadius: '4px',
-                                color: '#e2e8f0',
-                                fontSize: '12px',
-                                outline: 'none',
-                                boxSizing: 'border-box'
-                              }}
-                            />
-                          </div>
-
-                          {[
-                            { label: 'Include DROP statements', checked: includeDrop, onChange: setIncludeDrop },
-                            { label: 'Generate relationships (FK)', checked: generateFK, onChange: setGenerateFK },
-                            { label: 'Include seed data', checked: includeSeed, onChange: setIncludeSeed },
-                          ].map((setting) => (
-                            <label
-                              key={setting.label}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '6px 0',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                color: '#cbd5e1'
-                              }}
-                            >
-                              <div
-                                onClick={() => setting.onChange(!setting.checked)}
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  borderRadius: '4px',
-                                  border: setting.checked ? '2px solid #38bdf8' : '2px solid #475569',
-                                  background: setting.checked ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  transition: 'all 0.15s ease',
-                                  flexShrink: 0
-                                }}
-                              >
-                                {setting.checked && <Check size={10} style={{ color: '#38bdf8' }} />}
-                              </div>
-                              {setting.label}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
+                      {/* Target DB & Settings Moved to Sidebar */}
 
                       {/* Right: SQL Preview */}
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                        {/* Preview Header */}
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '8px 12px',
-                          borderBottom: '1px solid #1e293b',
-                          background: '#0d1117'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }}></span>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b' }}></span>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981' }}></span>
-                            <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>{targetDb} Dialect</span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              onClick={() => copyToClipboard(generateExportSQL())}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 10px',
-                                background: 'rgba(148, 163, 184, 0.08)',
-                                border: '1px solid #334155',
-                                borderRadius: '4px',
-                                color: '#94a3b8',
-                                fontSize: '11px',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              {copied ? <Check size={11} style={{ color: '#10b981' }} /> : <Copy size={11} />}
-                              Copy to Clipboard
-                            </button>
-                            <button
-                              onClick={handleDownloadSQL}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 10px',
-                                background: 'rgba(56, 189, 248, 0.12)',
-                                border: '1px solid rgba(56, 189, 248, 0.3)',
-                                borderRadius: '4px',
-                                color: '#38bdf8',
-                                fontSize: '11px',
-                                cursor: 'pointer',
-                                fontWeight: 600,
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              <Download size={11} />
-                              Download .sql
-                            </button>
-                          </div>
-                        </div>
+                        {/* Preview Header (Actions moved to Top Bar) */}
 
                         {/* SQL Code Preview */}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '16px', background: '#080c14', fontFamily: '"JetBrains Mono", "Fira Code", monospace' }}>

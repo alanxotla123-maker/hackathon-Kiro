@@ -9,14 +9,15 @@ generator client {
 
 // User / TeamMember model
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  role      String   // e.g., "Full-Stack", "Front-End", "Back-End"
-  password  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  tasks     Task[]
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  role         String   // e.g., "Full-Stack", "Front-End", "Back-End"
+  password     String?
+  profileImage String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tasks        Task[]
 }
 
 // Project model that links to a GitHub Repository
