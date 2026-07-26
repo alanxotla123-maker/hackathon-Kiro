@@ -30,8 +30,10 @@ import {
   FolderOpen,
   Clock,
   LayoutGrid,
-  Users
+  Users,
+  Wand2
 } from 'lucide-react'
+import logoImg from '../../logo/logo.jpeg'
 import { DashboardHome } from '../Dashboard/DashboardHome'
 import { UserProfileView } from '../Dashboard/UserProfileView'
 
@@ -1135,11 +1137,7 @@ export default function DatabaseDesigner({
           ) : (
             <>
               <div className="master-sidebar-logo-group">
-                <div className="master-logo-circle">
-                  <svg className="master-logo-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#38bdf8" strokeWidth="2.5">
-                    <path d="M12 12c-2-2.67-4-4-6-4A4 4 0 0 0 2 12a4 4 0 0 0 4 4c2 0 4-1.33 6-4Zm0 0c2-2.67 4-4 6-4a4 4 0 0 1 4 4 4 4 0 0 1-4 4c-2 0-4-1.33-6-4Z" />
-                  </svg>
-                </div>
+                <img src={logoImg} alt="DevSync Logo" className="master-logo-img" />
                 <div className="master-logo-text-group">
                   <span className="master-logo-text">DevSync</span>
                   <span className="master-logo-sub">Production Environment</span>
