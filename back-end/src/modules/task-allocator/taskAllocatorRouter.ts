@@ -142,4 +142,44 @@ router.post("/allocate", async (req, res) => {
   }
 });
 
+// GET all StackAgent boards
+router.get("/boards", async (req, res) => {
+  try {
+    const boards = await prisma.stackAgentBoard.findMany({
+      orderBy: { updatedAt: "desc" }
+    });
+    res.json(boards);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST new StackAgent board
+router.post("/boards", async (req, res) => {
+  const { name, boardData } = req.body;
+  try {
+    const board = await prisma.stackAgentBoard.create({
+      data: {
+        name,
+        boardData
+      }
+    });
+    res.status(201).json(board);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE StackAgent board
+router.delete("/boards/:id", async (req, res) => {
+  try {
+    await prisma.stackAgentBoard.delete({
+      where: { id: parseInt(req.params.id) }
+    });
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

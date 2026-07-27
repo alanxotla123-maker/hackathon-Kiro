@@ -30,9 +30,33 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [bio, setBio] = useState('Full-stack engineer specializing in high-concurrency systems and distributed architectures. Currently maintaining the DevSync Engine and exploring Rust for low-level optimizations.')
   const [email, setEmail] = useState(`${userName.toLowerCase().replace(/\s+/g, '')}@devsync.io`)
   const [workstationId, setWorkstationId] = useState('NODE_742_X_DEV')
+  const [role, setRole] = useState('Senior Infrastructure Engineer')
+  const [location, setLocation] = useState('Remote / SF Node')
   const githubUser = `${userName.toLowerCase().replace(/\s+/g, '_')}-official`
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [profileImageUrl, setProfileImageUrl] = useState(localStorage.getItem('profileImageUrl') || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80")
+
+  React.useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch(`http://localhost:3000/api/auth/user/${encodeURIComponent(userName)}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.email) setEmail(data.email);
+          if (data.role) setRole(data.role);
+          if (data.profileImage) {
+            setProfileImageUrl(data.profileImage);
+            localStorage.setItem('profileImageUrl', data.profileImage);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch user data', err);
+      }
+    };
+    if (userName && userName !== 'Github Developer') {
+      fetchUser();
+    }
+  }, [userName]);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -141,7 +165,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
               <div>
                 <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#e2e8f0', margin: '0 0 4px 0' }}>{fullName}</h3>
-                <span style={{ fontSize: '11px', color: '#64748b' }}>Lead Engineer @ SystemCore</span>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>{role}</span>
               </div>
 
               <input 
@@ -225,6 +249,46 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             flexDirection: 'column',
             gap: '20px'
           }}>
+            {/* Role and Location fields */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b', letterSpacing: '0.05em' }}>ROLE</label>
+                <input 
+                  type="text" 
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    backgroundColor: '#090b0f',
+                    border: '1px solid #1f2937',
+                    color: '#e2e8f0',
+                    fontSize: '12px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b', letterSpacing: '0.05em' }}>LOCATION / NODE</label>
+                <input 
+                  type="text" 
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    backgroundColor: '#090b0f',
+                    border: '1px solid #1f2937',
+                    color: '#e2e8f0',
+                    fontSize: '12px',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
             {/* Developer Handle field */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label style={{ fontSize: '10px', fontWeight: 600, color: '#64748b', letterSpacing: '0.05em' }}>DEVELOPER HANDLE</label>
@@ -439,7 +503,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 border: '1px solid rgba(56, 189, 248, 0.15)' 
               }}>
                 <Shield size={11} />
-                Senior Infrastructure Engineer
+                {role}
               </span>
               <span style={{ 
                 display: 'inline-flex', 
@@ -453,7 +517,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
                 border: '1px solid rgba(100, 116, 139, 0.15)' 
               }}>
                 <MapPin size={11} />
-                Remote / SF Node
+                {location}
               </span>
             </div>
             <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0, maxWidth: '580px', lineHeight: 1.5 }}>

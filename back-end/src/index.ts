@@ -10,7 +10,7 @@ import docGeneratorRouter from "./modules/doc-generator/docGeneratorRouter.js";
 import codeReviewRouter from "./modules/code-review/codeReviewRouter.js";
 import authRouter from "./modules/auth/authRouter.js";
 import uploadRouter from "./modules/upload/uploadRouter.js";
-
+import deepLintRouter from "./modules/deeplint/deepLintRouter.js";
 dotenv.config();
 
 const app = express();
@@ -32,6 +32,7 @@ app.use("/api/branch-sync", branchSyncRouter);
 app.use("/api/doc-generator", docGeneratorRouter);
 app.use("/api/code-review", codeReviewRouter);
 app.use("/api/upload", uploadRouter);
+app.use("/api/deeplint", deepLintRouter);
 
 // Start server
 app.listen(PORT, () => {
