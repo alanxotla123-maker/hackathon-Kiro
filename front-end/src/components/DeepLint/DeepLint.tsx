@@ -8,7 +8,11 @@ import {
   GitBranch,
   ArrowLeft,
   Loader2,
-  Bell
+  Bell,
+  Save,
+  FolderOpen,
+  Trash2,
+  X
 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import './DeepLint.css';
@@ -40,6 +44,75 @@ const DeepLint: React.FC<DeepLintProps> = ({ onBack }) => {
     securityScore: 88,
     speed: '14ms'
   });
+
+  const [savedLints, setSavedLints] = useState<any[]>([]);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [saveName, setSaveName] = useState('');
+
+  const fetchSavedLints = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/deeplint');
+      if (res.ok) {
+        const data = await res.json();
+        setSavedLints(data);
+      }
+    } catch (e) {
+      console.error('Error fetching saved lints', e);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchSavedLints();
+  }, []);
+
+  const handleSaveLint = async () => {
+    if (!saveName || !repoUrl || !activeFile) {
+      alert('Debe ingresar un nombre, URL del repo y seleccionar un archivo.');
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:3000/api/deeplint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: saveName,
+          repoUrl,
+          fileName: activeFile,
+          leftCode,
+          rightCode
+        })
+      });
+      if (res.ok) {
+        setShowSaveModal(false);
+        setSaveName('');
+        fetchSavedLints();
+        alert('Análisis guardado correctamente.');
+      } else {
+        alert('Error al guardar el análisis.');
+      }
+    } catch (e) {
+      console.error('Error saving lint', e);
+    }
+  };
+
+  const handleDeleteLint = async (id: number) => {
+    if (!confirm('¿Seguro que deseas eliminar este guardado?')) return;
+    try {
+      await fetch(`http://localhost:3000/api/deeplint/${id}`, { method: 'DELETE' });
+      fetchSavedLints();
+    } catch (e) {
+      console.error('Error deleting', e);
+    }
+  };
+
+  const handleLoadLint = (lint: any) => {
+    setRepoUrl(lint.repoUrl);
+    setActiveFile(lint.fileName);
+    setLeftCode(lint.leftCode);
+    setRightCode(lint.rightCode);
+    setShowLoadModal(false);
+  };
 
   const analyzeRepo = async () => {
     if (!repoUrl) return;
@@ -204,6 +277,12 @@ ${rawText.slice(0, 5000)}`;
               <button className="btn-accept" onClick={analyzeRepo} disabled={isFetchingRepo}>
                 {isFetchingRepo ? <Loader2 size={16} className="animate-spin" /> : 'Analizar'}
               </button>
+              <button className="btn-secondary" onClick={() => setShowLoadModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '36px', padding: '0 16px', borderRadius: '6px', backgroundColor: 'transparent', border: '1px solid #1e293b', color: '#e2e8f0', fontSize: '13px', fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s' }}>
+                <FolderOpen size={14} /> Cargar
+              </button>
+              <button className="btn-secondary" onClick={() => setShowSaveModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '36px', padding: '0 16px', borderRadius: '6px', backgroundColor: 'transparent', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38bdf8', fontSize: '13px', fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s' }}>
+                <Save size={14} /> Guardar
+              </button>
             </div>
           </div>
 
@@ -306,6 +385,60 @@ ${rawText.slice(0, 5000)}`;
           </div>
         </div>
       </main>
+
+      {/* Save Modal */}
+      {showSaveModal && (
+        <div className="docify-modal-overlay">
+          <div className="docify-modal">
+            <div className="docify-modal-header">
+              <h3>Guardar Análisis (DeepLint)</h3>
+              <button onClick={() => setShowSaveModal(false)}><X size={16}/></button>
+            </div>
+            <div className="docify-modal-body">
+              <label>Nombre del Análisis:</label>
+              <input 
+                type="text" 
+                value={saveName} 
+                onChange={e => setSaveName(e.target.value)} 
+                placeholder="Ej. Refactor Login Component" 
+              />
+              <button className="docify-btn docify-btn-primary" onClick={handleSaveLint} style={{ marginTop: '16px' }}>Guardar Análisis</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Load Modal */}
+      {showLoadModal && (
+        <div className="docify-modal-overlay">
+          <div className="docify-modal" style={{ width: '500px', maxWidth: '90vw' }}>
+            <div className="docify-modal-header">
+              <h3>Cargar Análisis Guardado</h3>
+              <button onClick={() => setShowLoadModal(false)}><X size={16}/></button>
+            </div>
+            <div className="docify-modal-body">
+              {savedLints.length === 0 ? (
+                <p style={{ color: '#94a3b8', fontSize: '14px' }}>No hay análisis guardados aún.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto' }}>
+                  {savedLints.map(lint => (
+                    <div key={lint.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#131924', border: '1px solid #1e293b', borderRadius: '6px' }}>
+                      <div style={{ cursor: 'pointer', flex: 1 }} onClick={() => handleLoadLint(lint)}>
+                        <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#f8fafc' }}>{lint.name}</h4>
+                        <span style={{ fontSize: '12px', color: '#64748b' }}>{lint.fileName}</span>
+                      </div>
+                      <button onClick={() => handleDeleteLint(lint.id)} style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '6px' }} title="Eliminar">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
