@@ -3,11 +3,7 @@ import { ArrowLeft, Settings, UserPlus, Columns, Loader2, X, Edit2, Trash2, Spar
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import './StackAgent.css';
 
-interface StackAgentProps {
-  onBack?: () => void;
-}
-
-interface Task {
+export interface Task {
   id: number;
   name: string;
   difficulty: string; // 'DIFÍCIL' | 'MEDIA' | 'FÁCIL'
@@ -15,7 +11,7 @@ interface Task {
   phase?: string;
 }
 
-interface Member {
+export interface Member {
   id: number;
   name: string;
   role: string;
@@ -24,36 +20,42 @@ interface Member {
   tasks: Task[];
 }
 
-export default function StackAgent({ onBack }: StackAgentProps) {
+export const DEFAULT_STACKAGENT_MEMBERS: Member[] = [
+  {
+    id: 1,
+    name: 'Axel',
+    role: 'Backend',
+    level: 'Senior',
+    stack: 'C#, Python, SQL',
+    tasks: []
+  },
+  {
+    id: 2,
+    name: 'Andres',
+    role: 'Frontend',
+    level: 'Mid',
+    stack: 'React, TypeScript, CSS',
+    tasks: []
+  }
+];
+
+interface StackAgentProps {
+  onBack?: () => void;
+  members: Member[];
+  setMembers: React.Dispatch<React.SetStateAction<Member[]>>;
+}
+
+export default function StackAgent({ onBack, members, setMembers }: StackAgentProps) {
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
-  
+
   // New Member Form State
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState('Backend');
   const [newLevel, setNewLevel] = useState('Junior');
   const [newStack, setNewStack] = useState('');
-
-  const [members, setMembers] = useState<Member[]>([
-    {
-      id: 1,
-      name: 'Axel',
-      role: 'Backend',
-      level: 'Senior',
-      stack: 'C#, Python, SQL',
-      tasks: []
-    },
-    {
-      id: 2,
-      name: 'Andres',
-      role: 'Frontend',
-      level: 'Mid',
-      stack: 'React, TypeScript, CSS',
-      tasks: []
-    }
-  ]);
 
   const [savedBoards, setSavedBoards] = useState<any[]>([]);
   const [showSavedPanel, setShowSavedPanel] = useState(false);

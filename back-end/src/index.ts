@@ -21,7 +21,12 @@ app.use(express.json());
 
 // Base API route
 app.get("/api/health", (req, res) => {
-  res.json({ status: "OK", message: "Developer Productivity Tools API is running" });
+  res.json({
+    status: "OK",
+    message: "Developer Productivity Tools API is running",
+    region: process.env.AWS_REGION || "us-east-2",
+    uptimeSeconds: process.uptime(),
+  });
 });
 
 // Feature routers

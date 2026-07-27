@@ -1,8 +1,43 @@
 import { Router } from "express";
 import axios from "axios";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { resolve } from "node:path";
 import prisma from "../../db.js";
 
 const router = Router();
+const execFileAsync = promisify(execFile);
+
+// Project root is 4 levels up from this file: back-end/src/modules/branch-sync/ → project root
+const REPO_ROOT = resolve(__dirname, "..", "..", "..", "..");
+
+const runGit = (args: string[]): Promise<string> =>
+  execFileAsync("git", args, { cwd: REPO_ROOT }).then((r) => r.stdout.trim());
+
+// GET real ahead/behind status of every remote team branch vs origin/main (read-only, uses
+// whatever refs were last fetched locally — does not run `git fetch`).
+router.get("/team-status", async (_req, res) => {
+  try {
+    const branchesRaw = await runGit(["branch", "-r", "--format=%(refname:short)"]);
+    const branches = branchesRaw
+      .split("\n")
+      .map((b) => b.trim())
+      .filter((b) => b && b !== "origin" && b !== "origin/main" && b !== "origin/HEAD");
+
+    const results = await Promise.all(
+      branches.map(async (branch) => {
+        const counts = await runGit(["rev-list", "--left-right", "--count", `origin/main...${branch}`]);
+        const [behindMain, aheadOfMain] = counts.split(/\s+/).map((n) => parseInt(n, 10));
+        return { branch: branch.replace(/^origin\//, ""), aheadOfMain, behindMain };
+      })
+    );
+
+    results.sort((a, b) => b.aheadOfMain - a.aheadOfMain);
+    res.json({ baseBranch: "main", branches: results });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to read git status" });
+  }
+});
 
 // GET synchronization status of a project
 router.get("/status/:projectId", async (req, res) => {

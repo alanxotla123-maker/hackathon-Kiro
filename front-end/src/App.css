@@ -2506,7 +2506,7 @@ input:checked + .slider:before {
 /* Quick stats cards */
 .quick-stats-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 
@@ -2543,11 +2543,6 @@ input:checked + .slider:before {
 .stat-icon-wrapper.uptime {
   background-color: rgba(56, 189, 248, 0.08);
   color: #38bdf8;
-}
-
-.stat-icon-wrapper.instances {
-  background-color: rgba(99, 102, 241, 0.08);
-  color: #6366f1;
 }
 
 .stat-icon-wrapper.pending-alerts {
@@ -2594,6 +2589,15 @@ input:checked + .slider:before {
 .status-dot.green {
   background-color: #10b981;
   box-shadow: 0 0 8px #10b981;
+}
+
+.status-dot.red {
+  background-color: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+.status-dot.gray {
+  background-color: #64748b;
 }
 
 .text-red {
@@ -2688,6 +2692,15 @@ input:checked + .slider:before {
   border-color: rgba(56, 189, 248, 0.3);
 }
 
+.recent-docs-widget {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recent-docs-widget:hover {
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
 .blueprint-canvas-preview {
   height: 240px;
   background-color: #070a0f;
@@ -2778,6 +2791,48 @@ input:checked + .slider:before {
   z-index: 1;
 }
 
+.preview-row-more {
+  color: #64748b;
+  font-style: italic;
+  justify-content: flex-start;
+}
+
+.blueprint-preview-empty {
+  z-index: 2;
+  color: #64748b;
+  font-size: 12px;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.blueprint-preview-more-tables {
+  position: absolute;
+  bottom: 12px;
+  left: 16px;
+  z-index: 2;
+  font-size: 10px;
+  color: #64748b;
+  background-color: rgba(255, 255, 255, 0.03);
+  padding: 3px 8px;
+  border-radius: 10px;
+  border: 1px solid #131924;
+  font-family: var(--font-mono);
+}
+
+/* Same look as .blueprint-preview-more-tables but flows inline at the end of a
+   list instead of being absolutely positioned — for widgets without a positioned,
+   fixed-height container (Team Bandwidth, Merge Guard, Recent Docs). */
+.list-more-badge {
+  align-self: flex-start;
+  font-size: 10px;
+  color: #64748b;
+  background-color: rgba(255, 255, 255, 0.03);
+  padding: 3px 8px;
+  border-radius: 10px;
+  border: 1px solid #131924;
+  font-family: var(--font-mono);
+}
+
 .canvas-controls-overlay {
   position: absolute;
   bottom: 12px;
@@ -2816,6 +2871,13 @@ input:checked + .slider:before {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #131924;
+}
+
+.bandwidth-item:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .bandwidth-info {
@@ -2829,68 +2891,50 @@ input:checked + .slider:before {
   color: #f1f5f9;
 }
 
-.member-capacity {
-  font-weight: 600;
+.member-role-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.02em;
 }
 
-.member-capacity.text-green {
-  color: #10b981;
-}
-
-.member-capacity.text-blue {
+.member-role-badge.role-backend {
   color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
 }
 
-.member-capacity.text-purple {
-  color: #6366f1;
+.member-role-badge.role-frontend {
+  color: #8b5cf6;
+  background-color: rgba(139, 92, 246, 0.1);
 }
 
-.capacity-bar-bg {
-  height: 6px;
-  background-color: #070a0f;
-  border-radius: 3px;
-  overflow: hidden;
+.member-role-badge.role-fullstack {
+  color: #10b981;
+  background-color: rgba(16, 185, 129, 0.1);
 }
 
-.capacity-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-}
-
-.capacity-bar-fill.green {
-  background-color: #10b981;
-}
-
-.capacity-bar-fill.blue {
-  background-color: #3b82f6;
-}
-
-.capacity-bar-fill.purple {
-  background-color: #6366f1;
-}
-
-.bandwidth-tip {
-  margin-top: 8px;
-  padding: 10px 12px;
-  background-color: rgba(99, 102, 241, 0.05);
-  border: 1px solid rgba(99, 102, 241, 0.1);
-  border-radius: 6px;
+.member-meta-row {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.tip-icon {
-  color: #6366f1;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.bandwidth-tip p {
-  margin: 0;
+  align-items: center;
+  gap: 8px;
   font-size: 11px;
+  color: #64748b;
+}
+
+.member-level {
+  font-weight: 600;
   color: #94a3b8;
-  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.member-stack {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Merge guard */
@@ -2910,11 +2954,11 @@ input:checked + .slider:before {
   border-radius: 6px;
 }
 
-.merge-item.conflict {
-  border-left: 3px solid #ef4444;
+.merge-item.pending {
+  border-left: 3px solid #f59e0b;
 }
 
-.merge-item.clean {
+.merge-item.synced {
   border-left: 3px solid #10b981;
 }
 
@@ -2933,21 +2977,6 @@ input:checked + .slider:before {
 .merge-meta {
   font-size: 10px;
   color: #4b5563;
-}
-
-.btn-resolve {
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-resolve:hover {
-  background-color: rgba(239, 68, 68, 0.15);
 }
 
 .status-icon-check {
@@ -3028,21 +3057,6 @@ input:checked + .slider:before {
 
 .btn-insight-apply:hover {
   background-color: rgba(99, 102, 241, 0.18);
-}
-
-.btn-insight-dismiss {
-  background: none;
-  border: 1px solid #131924;
-  color: #4b5563;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.btn-insight-dismiss:hover {
-  background-color: rgba(255, 255, 255, 0.02);
-  color: #94a3b8;
 }
 
 /* Blueprint Designer Inner Workspace Wrapper Styles */
