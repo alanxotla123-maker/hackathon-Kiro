@@ -4,10 +4,13 @@ import Register from './components/Auth/Register'
 import ForgotPassword from './components/Auth/ForgotPassword'
 import Success from './components/Auth/Success'
 import DatabaseDesigner from './components/DatabaseDesigner/DatabaseDesigner'
+import DeepLint from './components/DeepLint/DeepLint'
+import AIPoc from './components/AIPoc/AIPoc'
+import BranchTree from './components/BranchTree/BranchTree'
 import './App.css'
 
 export default function App() {
-  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'loginSuccess' | 'workspace'>(() => {
+  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'loginSuccess' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree'>(() => {
     const saved = localStorage.getItem('authSession')
     return saved === 'active' ? 'workspace' : 'login'
   })
@@ -16,9 +19,9 @@ export default function App() {
   const [registerConflict, setRegisterConflict] = useState<boolean>(false)
   const [notification, setNotification] = useState<string | null>(null)
 
-  const handleSetAuthScreen = (screen: 'login' | 'register' | 'forgot' | 'success' | 'loginSuccess' | 'workspace') => {
+  const handleSetAuthScreen = (screen: 'login' | 'register' | 'forgot' | 'success' | 'loginSuccess' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree') => {
     setAuthScreen(screen)
-    if (screen === 'workspace') {
+    if (screen === 'workspace' || screen === 'branchtree') {
       localStorage.setItem('authSession', 'active')
     } else if (screen === 'login') {
       localStorage.removeItem('authSession')
@@ -95,6 +98,18 @@ export default function App() {
           setAuthScreen={handleSetAuthScreen}
           showNotification={showNotification}
         />
+      )}
+
+      {authScreen === 'deeplint' && (
+        <DeepLint onBack={() => handleSetAuthScreen('workspace')} />
+      )}
+
+      {authScreen === 'aipoc' && (
+        <AIPoc onBack={() => handleSetAuthScreen('workspace')} />
+      )}
+
+      {authScreen === 'branchtree' && (
+        <BranchTree />
       )}
     </div>
   )

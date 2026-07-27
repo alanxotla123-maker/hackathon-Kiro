@@ -2255,15 +2255,11 @@ input:checked + .slider:before {
   border-bottom: 1px solid #131924;
 }
 
-.master-logo-circle {
+.master-logo-img {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  background-color: rgba(56, 189, 248, 0.08);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 4px;
+  object-fit: contain;
 }
 
 .master-logo-text-group {
