@@ -1,13 +1,9 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Settings, UserPlus, Columns, Loader2, X, Edit2, Trash2, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Settings, UserPlus, Columns, Loader2, X, Edit2, Trash2, Sparkles, Save, FolderOpen } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import './StackAgent.css';
 
-interface StackAgentProps {
-  onBack?: () => void;
-}
-
-interface Task {
+export interface Task {
   id: number;
   name: string;
   difficulty: string; // 'DIFÍCIL' | 'MEDIA' | 'FÁCIL'
@@ -15,7 +11,7 @@ interface Task {
   phase?: string;
 }
 
-interface Member {
+export interface Member {
   id: number;
   name: string;
   role: string;
@@ -24,36 +20,108 @@ interface Member {
   tasks: Task[];
 }
 
-export default function StackAgent({ onBack }: StackAgentProps) {
+export const DEFAULT_STACKAGENT_MEMBERS: Member[] = [
+  {
+    id: 1,
+    name: 'Axel',
+    role: 'Backend',
+    level: 'Senior',
+    stack: 'C#, Python, SQL',
+    tasks: []
+  },
+  {
+    id: 2,
+    name: 'Andres',
+    role: 'Frontend',
+    level: 'Mid',
+    stack: 'React, TypeScript, CSS',
+    tasks: []
+  }
+];
+
+interface StackAgentProps {
+  onBack?: () => void;
+  members: Member[];
+  setMembers: React.Dispatch<React.SetStateAction<Member[]>>;
+}
+
+export default function StackAgent({ onBack, members, setMembers }: StackAgentProps) {
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<number | null>(null);
-  
+
   // New Member Form State
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState('Backend');
   const [newLevel, setNewLevel] = useState('Junior');
   const [newStack, setNewStack] = useState('');
 
-  const [members, setMembers] = useState<Member[]>([
-    {
-      id: 1,
-      name: 'Axel',
-      role: 'Backend',
-      level: 'Senior',
-      stack: 'C#, Python, SQL',
-      tasks: []
-    },
-    {
-      id: 2,
-      name: 'Andres',
-      role: 'Frontend',
-      level: 'Mid',
-      stack: 'React, TypeScript, CSS',
-      tasks: []
+  const [savedBoards, setSavedBoards] = useState<any[]>([]);
+  const [showSavedPanel, setShowSavedPanel] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveDialogName, setSaveDialogName] = useState('');
+
+  useEffect(() => {
+    const fetchBoards = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/api/task-allocator/boards');
+        if (res.ok) {
+          const boards = await res.json();
+          setSavedBoards(boards);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchBoards();
+  }, []);
+
+  const handleConfirmSave = async () => {
+    if (!saveDialogName.trim()) return;
+    try {
+      const res = await fetch('http://localhost:3000/api/task-allocator/boards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: saveDialogName,
+          boardData: JSON.stringify(members)
+        })
+      });
+      if (res.ok) {
+        const newBoard = await res.json();
+        setSavedBoards([newBoard, ...savedBoards]);
+        setSaveDialogOpen(false);
+        setSaveDialogName('');
+        alert('Tablón guardado exitosamente.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error al guardar');
     }
-  ]);
+  };
+
+  const handleLoadBoard = (board: any) => {
+    try {
+      const parsedMembers = JSON.parse(board.boardData);
+      setMembers(parsedMembers);
+      setShowSavedPanel(false);
+      alert('Tablón cargado.');
+    } catch(e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteBoard = async (id: number) => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/task-allocator/boards/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setSavedBoards(savedBoards.filter(b => b.id !== id));
+      }
+    } catch(e) {
+      console.error(e);
+    }
+  };
 
   const handleAddMember = () => {
     if (!newName.trim() || !newStack.trim()) return;
@@ -179,21 +247,18 @@ Devuelve la respuesta ÚNICAMENTE como un array de objetos JSON con esta estruct
 
   return (
     <div className="stackagent-container">
-      {/* Header */}
-      <header className="stackagent-header">
-        <div className="stackagent-title-group">
-          <ArrowLeft size={18} className="back-icon" onClick={onBack} />
-          <div className="title-text">
-            <h1>StackAgent</h1>
-            <span className="subtitle">WORK DISTRIBUTOR</span>
-          </div>
-        </div>
-      </header>
-
       <div className="stackagent-content">
         {/* Left Sidebar */}
         <aside className="stackagent-sidebar">
-          {/* System Summary */}
+          <div className="master-sidebar-logo-group" style={{ cursor: 'pointer', borderBottom: '1px solid #131924' }} onClick={onBack}>
+            <ArrowLeft size={16} style={{ color: '#94a3b8', marginRight: '8px' }} />
+            <div className="master-logo-text-group">
+              <span className="master-logo-text" style={{ fontSize: '13px' }}>StackAgent</span>
+              <span className="master-logo-sub">work-distributor</span>
+            </div>
+          </div>
+          <div style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', flex: 1 }}>
+            {/* System Summary */}
           <div className="section-block">
             <h2 className="section-title">Resumen del sistema</h2>
             <div className="textarea-wrapper">
@@ -265,18 +330,38 @@ Devuelve la respuesta ÚNICAMENTE como un array de objetos JSON con esta estruct
                 GENERAR / ACTUALIZAR TABLÓN
               </div>
             )}
-          </button>
+            </button>
+          </div>
         </aside>
 
         {/* Right Board Area */}
         <main className="stackagent-board-area">
           <div className="board-header">
             <h2>tablón de distribución</h2>
-            <div className="difficulty-legend">
-              <span className="legend-title">DIFICULTAD DE TAREA:</span>
-              <div className="legend-item"><span className="dot hard"></span> DIFÍCIL</div>
-              <div className="legend-item"><span className="dot medium"></span> MEDIA</div>
-              <div className="legend-item"><span className="dot easy"></span> FÁCIL</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div className="difficulty-legend">
+                <span className="legend-title">DIFICULTAD DE TAREA:</span>
+                <div className="legend-item"><span className="dot hard"></span> DIFÍCIL</div>
+                <div className="legend-item"><span className="dot medium"></span> MEDIA</div>
+                <div className="legend-item"><span className="dot easy"></span> FÁCIL</div>
+              </div>
+              <div style={{ width: '1px', height: '16px', background: '#334155' }}></div>
+              <button 
+                className="btn-secondary" 
+                onClick={() => setShowSavedPanel(!showSavedPanel)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: '1px solid #334155', color: '#e2e8f0', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+              >
+                <FolderOpen size={13} />
+                Cargar
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={() => setSaveDialogOpen(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#38bdf8', color: '#0f172a', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+              >
+                <Save size={13} />
+                Guardar
+              </button>
             </div>
           </div>
 
@@ -451,6 +536,72 @@ Devuelve la respuesta ÚNICAMENTE como un array de objetos JSON con esta estruct
               <button className="btn-submit" onClick={handleAddMember} disabled={!newName.trim() || !newStack.trim()}>
                 Guardar Integrante
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Save Dialog Modal */}
+      {saveDialogOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3>Guardar Tablón</h3>
+              <button className="close-modal-btn" onClick={() => setSaveDialogOpen(false)}>
+                <X size={16} />
+              </button>
+            </div>
+            <div className="form-group">
+              <label>Nombre del guardado</label>
+              <input 
+                type="text" 
+                placeholder="Mi tablón v1..." 
+                value={saveDialogName} 
+                onChange={(e) => setSaveDialogName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleConfirmSave() }}
+                autoFocus
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-cancel" onClick={() => setSaveDialogOpen(false)}>Cancelar</button>
+              <button className="btn-submit" onClick={handleConfirmSave} disabled={!saveDialogName.trim()}>
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saved Boards Panel Modal */}
+      {showSavedPanel && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header">
+              <h3>Tablones Guardados</h3>
+              <button className="close-modal-btn" onClick={() => setShowSavedPanel(false)}>
+                <X size={16} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 0' }}>
+              {savedBoards.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>No hay tablones guardados.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {savedBoards.map(board => (
+                    <div key={board.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: '#0f172a', borderRadius: '8px', border: '1px solid #1e293b' }}>
+                      <div>
+                        <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#e2e8f0' }}>{board.name}</div>
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>Guardado: {new Date(board.updatedAt).toLocaleString()}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => handleLoadBoard(board)} style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Cargar</button>
+                        <button onClick={() => handleDeleteBoard(board.id)} style={{ background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', padding: '6px 10px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

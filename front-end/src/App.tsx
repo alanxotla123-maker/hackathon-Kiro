@@ -11,7 +11,7 @@ import GithubCallback from './components/Auth/GithubCallback'
 import './App.css'
 
 export default function App() {
-  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree' | 'github_callback'>(() => {
+  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'loginSuccess' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree' | 'github_callback'>(() => {
     if (window.location.pathname === '/api/auth/github/callback') {
       return 'github_callback'
     }
@@ -23,7 +23,7 @@ export default function App() {
   const [registerConflict, setRegisterConflict] = useState<boolean>(false)
   const [notification, setNotification] = useState<string | null>(null)
 
-  const handleSetAuthScreen = (screen: 'login' | 'register' | 'forgot' | 'success' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree' | 'github_callback') => {
+  const handleSetAuthScreen = (screen: 'login' | 'register' | 'forgot' | 'success' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree') => {
     setAuthScreen(screen)
     if (screen === 'workspace' || screen === 'branchtree') {
       localStorage.setItem('authSession', 'active')
@@ -41,23 +41,11 @@ export default function App() {
     <div className="app-container">
       {/* Success Notification Alert */}
       {notification && (
-        <div style={{
-          position: 'fixed',
-          top: '64px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          backgroundColor: '#1e293b',
-          color: '#38bdf8',
-          padding: '8px 16px',
-          borderRadius: '20px',
-          border: '1px solid #38bdf8',
-          fontSize: '12px',
-          fontWeight: 600,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-          zIndex: 100,
-          pointerEvents: 'none'
-        }}>
-          {notification}
+        <div className="session-toast">
+          <svg viewBox="0 0 24 24" width="14" height="14" stroke="#34d399" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+          <span>{notification}</span>
         </div>
       )}
 
@@ -103,6 +91,16 @@ export default function App() {
         <Success
           setAuthScreen={handleSetAuthScreen}
           showNotification={showNotification}
+          variant="register"
+        />
+      )}
+
+      {authScreen === 'loginSuccess' && (
+        <Success
+          setAuthScreen={handleSetAuthScreen}
+          showNotification={showNotification}
+          variant="login"
+          userName={localStorage.getItem('userFullName') || undefined}
         />
       )}
 

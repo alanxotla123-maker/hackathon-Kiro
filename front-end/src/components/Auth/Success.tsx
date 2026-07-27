@@ -3,12 +3,32 @@ import logoImg from '../../logo/logo.jpeg'
 interface SuccessProps {
   setAuthScreen: (screen: any) => void
   showNotification: (msg: string) => void
+  variant?: 'register' | 'login'
+  userName?: string
+}
+
+const VARIANT_COPY = {
+  register: {
+    title: 'Account created successfully!',
+    description: 'Welcome to the DevSync workspace. Your infrastructure management environment is ready for configuration.'
+  },
+  login: {
+    title: 'Session started successfully!',
+    description: 'Welcome back to the DevSync workspace. Your infrastructure management environment is ready.'
+  }
 }
 
 export default function Success({
   setAuthScreen,
-  showNotification
+  showNotification,
+  variant = 'register',
+  userName
 }: SuccessProps) {
+  const copy = VARIANT_COPY[variant]
+  const description = variant === 'login' && userName
+    ? `Welcome back, ${userName}. Your infrastructure management environment is ready.`
+    : copy.description
+
   return (
     <div className="auth-page">
       <div className="auth-container">
@@ -31,9 +51,9 @@ export default function Success({
             </svg>
           </div>
 
-          <h2 className="success-title">Account created successfully!</h2>
+          <h2 className="success-title">{copy.title}</h2>
           <p className="card-desc-text">
-            Welcome to the DevSync workspace. Your infrastructure management environment is ready for configuration.
+            {description}
           </p>
 
           <button 

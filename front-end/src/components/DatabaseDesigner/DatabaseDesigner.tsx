@@ -24,32 +24,34 @@ import {
   Home,
   GitBranch,
   Sparkles,
-  Bell,
   ArrowLeft,
   Save,
   FolderOpen,
   Clock,
   LayoutGrid,
-  Users
+  Users,
+  Wand2,
+  ChevronDown,
+  ChevronUp,
+  MessageCircle,
+  BookOpen
 } from 'lucide-react'
+import logoImg from '../../logo/logo.jpeg'
 import { DashboardHome } from '../Dashboard/DashboardHome'
 import { UserProfileView } from '../Dashboard/UserProfileView'
-
-
-type BwTab = 'home' | 'tree' | 'commits'
 
 import type { Table, Column, DatabaseDesignerProps, SavedSchema } from './types';
 import { DocifyView } from './DocifyView';
 import { highlightShorthand, serializeTablesToShorthand } from './utils';
 import MergeGuard from '../MergeGuard/MergeGuard';
-import StackAgent from '../StackAgent/StackAgent';
+import StackAgent, { type Member as StackAgentMember, DEFAULT_STACKAGENT_MEMBERS } from '../StackAgent/StackAgent';
 
 const formatSavedDate = (dateStr: string) => {
   try {
     const d = new Date(dateStr);
-    return d.toLocaleString(undefined, { 
-      year: 'numeric', month: 'short', day: 'numeric', 
-      hour: '2-digit', minute: '2-digit' 
+    return d.toLocaleString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     });
   } catch (e) {
     return dateStr;
@@ -91,12 +93,13 @@ export default function DatabaseDesigner({
   ])
 
   // UI state
-  const [activeMasterTab, setActiveMasterTab] = useState<'home' | 'blueprint' | 'bandwidth' | 'mergeguard' | 'docify' | 'deeplint' | 'profile'>('home')
+  const [activeMasterTab, setActiveMasterTab] = useState<'home' | 'blueprint' | 'bandwidth' | 'mergeguard' | 'docify' | 'deeplint' | 'profile' | 'help'>('home')
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
   const [selectedTableId, setSelectedTableId] = useState<string | null>('orders')
   const [selectedRelationId, setSelectedRelationId] = useState<string | null>(null)
 
-  // Bandwidth State
-  const [bwTab, setBwTab] = useState<BwTab>('tree')
+  // StackAgent team members (lifted so Home's Team Bandwidth widget reflects the live team)
+  const [teamMembers, setTeamMembers] = useState<StackAgentMember[]>(DEFAULT_STACKAGENT_MEMBERS)
 
   const [zoom, setZoom] = useState<number>(100)
   const [searchQuery, setSearchQuery] = useState<string>('')
@@ -133,14 +136,33 @@ export default function DatabaseDesigner({
   const [isPropertiesCollapsed, setIsPropertiesCollapsed] = useState<boolean>(false)
 
   // Save system state
-  const [savedSchemas, setSavedSchemas] = useState<SavedSchema[]>(() => {
-    try {
-      const stored = localStorage.getItem('db_blueprint_saves')
-      return stored ? JSON.parse(stored) : []
-    } catch {
-      return []
+  const [savedSchemas, setSavedSchemas] = useState<SavedSchema[]>([])
+
+  useEffect(() => {
+    const fetchDesigns = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/api/db-designer/designs')
+        if (res.ok) {
+          const designs = await res.json()
+          const mappedSaves: SavedSchema[] = designs.map((d: any) => {
+            const parsedCanvas = JSON.parse(d.canvasData || '{}')
+            const savedTables = parsedCanvas.tables || []
+            return {
+              id: String(d.id),
+              name: d.name,
+              savedAt: d.updatedAt,
+              tables: savedTables,
+              tableCount: savedTables.length
+            }
+          })
+          setSavedSchemas(mappedSaves)
+        }
+      } catch (err) {
+        console.error('Failed to fetch designs', err)
+      }
     }
-  })
+    fetchDesigns()
+  }, [])
   const [showSavedPanel, setShowSavedPanel] = useState<boolean>(false)
   const [saveDialogOpen, setSaveDialogOpen] = useState<boolean>(false)
   const [saveDialogName, setSaveDialogName] = useState<string>('')
@@ -162,31 +184,58 @@ export default function DatabaseDesigner({
     setSaveDialogOpen(true)
   }
 
-  const handleConfirmSave = () => {
+  const handleConfirmSave = async () => {
     if (!saveDialogName.trim()) return
 
-    const newSave: SavedSchema = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-      name: saveDialogName,
-      savedAt: new Date().toISOString(),
-      tables: tables,
-      tableCount: tables.length
-    }
+    try {
+      const response = await fetch('http://localhost:3000/api/db-designer/designs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: saveDialogName,
+          canvasData: JSON.stringify({ tables }),
+          dbType: targetDb
+        })
+      })
 
-    const updatedSaves = [newSave, ...savedSchemas]
-    setSavedSchemas(updatedSaves)
-    localStorage.setItem('db_blueprint_saves', JSON.stringify(updatedSaves))
-    
-    setSaveDialogOpen(false)
-    setSaveDialogName('')
-    showNotification('Schema guardado exitosamente')
+      if (response.ok) {
+        const d = await response.json()
+        const newSave: SavedSchema = {
+          id: String(d.id),
+          name: d.name,
+          savedAt: d.updatedAt,
+          tables: tables,
+          tableCount: tables.length
+        }
+        setSavedSchemas([newSave, ...savedSchemas])
+        setSaveDialogOpen(false)
+        setSaveDialogName('')
+        showNotification('Schema guardado exitosamente en la base de datos')
+      } else {
+        showNotification('Error al guardar el schema')
+      }
+    } catch (err) {
+      console.error('Error saving schema', err)
+      showNotification('Error al contactar al servidor')
+    }
   }
 
-  const handleDeleteSave = (id: string) => {
-    const updatedSaves = savedSchemas.filter(s => s.id !== id)
-    setSavedSchemas(updatedSaves)
-    localStorage.setItem('db_blueprint_saves', JSON.stringify(updatedSaves))
-    showNotification('Guardado eliminado')
+  const handleDeleteSave = async (id: string) => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/db-designer/designs/${id}`, {
+        method: 'DELETE'
+      })
+      if (response.ok) {
+        const updatedSaves = savedSchemas.filter(s => s.id !== id)
+        setSavedSchemas(updatedSaves)
+        showNotification('Guardado eliminado de la base de datos')
+      } else {
+        showNotification('Error al eliminar guardado')
+      }
+    } catch (err) {
+      console.error('Error deleting schema', err)
+      showNotification('Error al contactar al servidor')
+    }
   }
 
   const handleLoadSchema = (save: SavedSchema) => {
@@ -866,158 +915,258 @@ export default function DatabaseDesigner({
                   {isSplitView ? 'CLOSE CODE EDITOR' : 'OPEN CODE EDITOR'}
                 </button>
 
-                <div className="sidebar-menu" style={{ padding: 0, marginTop: '12px' }}>
-                  <div
-                    className={`menu-item ${activeMenuTab === 'TABLES' ? 'active' : ''}`}
-                    onClick={() => setActiveMenuTab('TABLES')}
-                  >
-                    <Grid size={14} />
-                    TABLES ({filteredTables.length})
-                  </div>
-                  <div
-                    className={`menu-item ${activeMenuTab === 'RELATIONS' ? 'active' : ''}`}
-                    onClick={() => setActiveMenuTab('RELATIONS')}
-                  >
-                    <Link2 size={14} />
-                    RELATIONS
-                  </div>
-                  <div
-                    className={`menu-item ${activeMenuTab === 'INDICES' ? 'active' : ''}`}
-                    onClick={() => setActiveMenuTab('INDICES')}
-                  >
-                    <Key size={14} />
-                    INDICES
-                  </div>
-                </div>
-
-                {activeMenuTab === 'TABLES' && (
-                  <div className="sidebar-content-area" style={{ maxHeight: '280px', overflowY: 'auto' }}>
-                    <span className="sidebar-list-title">Tablas ({filteredTables.length})</span>
-                    {filteredTables.map(t => (
-                      <div
-                        key={t.id}
-                        className={`sidebar-list-item ${selectedTableId === t.id ? 'selected' : ''}`}
-                        onClick={() => setSelectedTableId(t.id)}
-                      >
-                        <span className="sidebar-item-name">
-                          <Database size={12} style={{ color: 'var(--accent-blue)', marginRight: '6px' }} />
-                          {t.name}
-                        </span>
-                        <span className="sidebar-item-meta">{t.columns.length} cols</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {activeMenuTab === 'RELATIONS' && (
-                  <div className="sidebar-content-area" style={{ maxHeight: '280px', overflowY: 'auto' }}>
-                    <span className="sidebar-list-title">Relaciones ({relationLines.length})</span>
-                    {relationLines.map((line) => (
-                      <div key={line.id} className="sidebar-list-item" onClick={() => setSelectedTableId(line.targetTableId)}>
-                        <span className="sidebar-item-name" style={{ fontSize: '10px' }}>
-                          <Link2 size={12} style={{ color: 'var(--accent-green)', marginRight: '6px' }} />
-                          {line.id.replace('_to_', ' ➜ ').replace(/_[a-zA-Z0-9]+_/g, '.')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {activeMenuTab === 'INDICES' && (
-                  <div className="sidebar-content-area" style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <span className="sidebar-list-title">Índices ({customIndices.length})</span>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {customIndices.map(idx => (
-                        <div key={idx.id} className="sidebar-list-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span className="sidebar-item-name">
-                            <Key size={12} style={{ color: 'var(--accent-purple)', marginRight: '6px' }} />
-                            {idx.name}
-                          </span>
-                          <button
-                            onClick={() => {
-                              setCustomIndices(prev => prev.filter(i => i.id !== idx.id))
-                              showNotification("Índice eliminado")
-                            }}
-                            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '10px' }}
-                          >
-                            ✕
-                          </button>
+                {/* Conditional Sidebar Content: Export Settings OR Tables/Relations/Indices */}
+                {(isSplitView && splitViewMode === 'export') ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px', padding: '0 4px' }}>
+                    <div>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>Target Database</span>
+                      {['PostgreSQL', 'MySQL', 'SQLite', 'MongoDB', 'Prisma ORM'].map(db => (
+                        <div
+                          key={db}
+                          onClick={() => setTargetDb(db)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 10px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            marginBottom: '2px',
+                            fontSize: '12px',
+                            fontWeight: targetDb === db ? 600 : 400,
+                            color: targetDb === db ? '#38bdf8' : '#94a3b8',
+                            background: targetDb === db ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
+                            border: targetDb === db ? '1px solid rgba(56, 189, 248, 0.2)' : '1px solid transparent',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <Database size={13} />
+                          {db}
+                          {targetDb === db && db === 'PostgreSQL' && (
+                            <span style={{ marginLeft: 'auto', fontSize: '9px', padding: '1px 5px', borderRadius: '3px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>v15</span>
+                          )}
                         </div>
                       ))}
                     </div>
 
-                    <div className="index-creator-form" style={{ marginTop: '12px', borderTop: '1px dashed #131924', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <span className="sidebar-list-title" style={{ fontSize: '10px' }}>NUEVO ÍNDICE</span>
+                    <div style={{ borderTop: '1px solid #131924', paddingTop: '16px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', marginBottom: '12px', display: 'block' }}>Export Settings</span>
 
-                      <select
-                        className="form-select"
-                        style={{ width: '100%', padding: '4px', fontSize: '11px', background: '#0d1117', border: '1px solid #1e293b', color: '#e2e8f0', borderRadius: '4px' }}
-                        value={selectedIndexTableId}
-                        onChange={(e) => {
-                          setSelectedIndexTableId(e.target.value)
-                          const tbl = tables.find(t => t.id === e.target.value)
-                          if (tbl && tbl.columns.length > 0) {
-                            setSelectedIndexColId(tbl.columns[0].id)
-                          }
-                        }}
+                      <div style={{ marginBottom: '12px' }}>
+                        <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500, marginBottom: '4px', display: 'block', textTransform: 'uppercase' }}>Schema Name</label>
+                        <input
+                          type="text"
+                          value={schemaName}
+                          onChange={(e) => setSchemaName(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '6px 10px',
+                            background: '#0d1117',
+                            border: '1px solid #1e293b',
+                            borderRadius: '4px',
+                            color: '#e2e8f0',
+                            fontSize: '12px',
+                            outline: 'none',
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      </div>
+
+                      {[
+                        { label: 'Include DROP statements', checked: includeDrop, onChange: setIncludeDrop },
+                        { label: 'Generate relationships (FK)', checked: generateFK, onChange: setGenerateFK },
+                        { label: 'Include seed data', checked: includeSeed, onChange: setIncludeSeed },
+                      ].map((setting) => (
+                        <label
+                          key={setting.label}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '6px 0',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            color: '#cbd5e1'
+                          }}
+                        >
+                          <div
+                            onClick={() => setting.onChange(!setting.checked)}
+                            style={{
+                              width: '16px',
+                              height: '16px',
+                              borderRadius: '4px',
+                              border: setting.checked ? '2px solid #38bdf8' : '2px solid #475569',
+                              background: setting.checked ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.15s ease',
+                              flexShrink: 0
+                            }}
+                          >
+                            {setting.checked && <Check size={10} style={{ color: '#38bdf8' }} />}
+                          </div>
+                          {setting.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="sidebar-menu" style={{ padding: 0, marginTop: '12px' }}>
+                      <div
+                        className={`menu-item ${activeMenuTab === 'TABLES' ? 'active' : ''}`}
+                        onClick={() => setActiveMenuTab('TABLES')}
                       >
-                        <option value="">Selecciona Tabla...</option>
-                        {tables.map(t => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
+                        <Grid size={14} />
+                        TABLES ({filteredTables.length})
+                      </div>
+                      <div
+                        className={`menu-item ${activeMenuTab === 'RELATIONS' ? 'active' : ''}`}
+                        onClick={() => setActiveMenuTab('RELATIONS')}
+                      >
+                        <Link2 size={14} />
+                        RELATIONS
+                      </div>
+                      <div
+                        className={`menu-item ${activeMenuTab === 'INDICES' ? 'active' : ''}`}
+                        onClick={() => setActiveMenuTab('INDICES')}
+                      >
+                        <Key size={14} />
+                        INDICES
+                      </div>
+                    </div>
 
-                      {selectedIndexTableId && (() => {
-                        const tbl = tables.find(t => t.id === selectedIndexTableId)
-                        if (!tbl) return null
-                        return (
+                    {activeMenuTab === 'TABLES' && (
+                      <div className="sidebar-content-area" style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                        <span className="sidebar-list-title">Tablas ({filteredTables.length})</span>
+                        {filteredTables.map(t => (
+                          <div
+                            key={t.id}
+                            className={`sidebar-list-item ${selectedTableId === t.id ? 'selected' : ''}`}
+                            onClick={() => setSelectedTableId(t.id)}
+                          >
+                            <span className="sidebar-item-name">
+                              <Database size={12} style={{ color: 'var(--accent-blue)', marginRight: '6px' }} />
+                              {t.name}
+                            </span>
+                            <span className="sidebar-item-meta">{t.columns.length} cols</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {activeMenuTab === 'RELATIONS' && (
+                      <div className="sidebar-content-area" style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                        <span className="sidebar-list-title">Relaciones ({relationLines.length})</span>
+                        {relationLines.map((line) => (
+                          <div key={line.id} className="sidebar-list-item" onClick={() => setSelectedTableId(line.targetTableId)}>
+                            <span className="sidebar-item-name" style={{ fontSize: '10px' }}>
+                              <Link2 size={12} style={{ color: 'var(--accent-green)', marginRight: '6px' }} />
+                              {line.id.replace('_to_', ' ➜ ').replace(/_[a-zA-Z0-9]+_/g, '.')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {activeMenuTab === 'INDICES' && (
+                      <div className="sidebar-content-area" style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <span className="sidebar-list-title">Índices ({customIndices.length})</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {customIndices.map(idx => (
+                            <div key={idx.id} className="sidebar-list-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span className="sidebar-item-name">
+                                <Key size={12} style={{ color: 'var(--accent-purple)', marginRight: '6px' }} />
+                                {idx.name}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  setCustomIndices(prev => prev.filter(i => i.id !== idx.id))
+                                  showNotification("Índice eliminado")
+                                }}
+                                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '10px' }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="index-creator-form" style={{ marginTop: '12px', borderTop: '1px dashed #131924', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <span className="sidebar-list-title" style={{ fontSize: '10px' }}>NUEVO ÍNDICE</span>
+
                           <select
                             className="form-select"
                             style={{ width: '100%', padding: '4px', fontSize: '11px', background: '#0d1117', border: '1px solid #1e293b', color: '#e2e8f0', borderRadius: '4px' }}
-                            value={selectedIndexColId}
-                            onChange={(e) => setSelectedIndexColId(e.target.value)}
+                            value={selectedIndexTableId}
+                            onChange={(e) => {
+                              setSelectedIndexTableId(e.target.value)
+                              const tbl = tables.find(t => t.id === e.target.value)
+                              if (tbl && tbl.columns.length > 0) {
+                                setSelectedIndexColId(tbl.columns[0].id)
+                              }
+                            }}
                           >
-                            <option value="">Selecciona Columna...</option>
-                            {tbl.columns.map(c => (
-                              <option key={c.id} value={c.id}>{c.name}</option>
+                            <option value="">Selecciona Tabla...</option>
+                            {tables.map(t => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
                             ))}
                           </select>
-                        )
-                      })()}
 
-                      <button
-                        className="btn-new-table"
-                        style={{ width: '100%', padding: '6px', fontSize: '11px', marginTop: '4px' }}
-                        onClick={() => {
-                          const tbl = tables.find(t => t.id === selectedIndexTableId)
-                          const col = tbl?.columns.find(c => c.id === selectedIndexColId)
-                          if (tbl && col) {
-                            const idxName = `idx_${tbl.name.toLowerCase()}_${col.name.toLowerCase()}`
-                            if (customIndices.some(i => i.name === idxName)) {
-                              showNotification("El índice ya existe")
-                              return
-                            }
-                            setCustomIndices(prev => [
-                              ...prev,
-                              {
-                                id: `idx_${Date.now()}`,
-                                name: idxName,
-                                tableName: tbl.name.toLowerCase(),
-                                columnName: col.name.toLowerCase()
+                          {selectedIndexTableId && (() => {
+                            const tbl = tables.find(t => t.id === selectedIndexTableId)
+                            if (!tbl) return null
+                            return (
+                              <select
+                                className="form-select"
+                                style={{ width: '100%', padding: '4px', fontSize: '11px', background: '#0d1117', border: '1px solid #1e293b', color: '#e2e8f0', borderRadius: '4px' }}
+                                value={selectedIndexColId}
+                                onChange={(e) => setSelectedIndexColId(e.target.value)}
+                              >
+                                <option value="">Selecciona Columna...</option>
+                                {tbl.columns.map(c => (
+                                  <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                              </select>
+                            )
+                          })()}
+
+                          <button
+                            className="btn-new-table"
+                            style={{ width: '100%', padding: '6px', fontSize: '11px', marginTop: '4px' }}
+                            onClick={() => {
+                              const tbl = tables.find(t => t.id === selectedIndexTableId)
+                              const col = tbl?.columns.find(c => c.id === selectedIndexColId)
+                              if (tbl && col) {
+                                const idxName = `idx_${tbl.name.toLowerCase()}_${col.name.toLowerCase()}`
+                                if (customIndices.some(i => i.name === idxName)) {
+                                  showNotification("El índice ya existe")
+                                  return
+                                }
+                                setCustomIndices(prev => [
+                                  ...prev,
+                                  {
+                                    id: `idx_${Date.now()}`,
+                                    name: idxName,
+                                    tableName: tbl.name.toLowerCase(),
+                                    columnName: col.name.toLowerCase()
+                                  }
+                                ])
+                                showNotification(`Índice ${idxName} creado!`)
+                                setSelectedIndexTableId('')
+                                setSelectedIndexColId('')
+                              } else {
+                                showNotification("Selecciona tabla y columna")
                               }
-                            ])
-                            showNotification(`Índice ${idxName} creado!`)
-                            setSelectedIndexTableId('')
-                            setSelectedIndexColId('')
-                          } else {
-                            showNotification("Selecciona tabla y columna")
-                          }
-                        }}
-                      >
-                        Crear Índice
-                      </button>
-                    </div>
-                  </div>
+                            }}
+                          >
+                            Crear Índice
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -1035,11 +1184,7 @@ export default function DatabaseDesigner({
           ) : (
             <>
               <div className="master-sidebar-logo-group">
-                <div className="master-logo-circle">
-                  <svg className="master-logo-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#38bdf8" strokeWidth="2.5">
-                    <path d="M12 12c-2-2.67-4-4-6-4A4 4 0 0 0 2 12a4 4 0 0 0 4 4c2 0 4-1.33 6-4Zm0 0c2-2.67 4-4 6-4a4 4 0 0 1 4 4 4 4 0 0 1-4 4c-2 0-4-1.33-6-4Z" />
-                  </svg>
-                </div>
+                <img src={logoImg} alt="DevSync Logo" className="master-logo-img" />
                 <div className="master-logo-text-group">
                   <span className="master-logo-text">DevSync</span>
                   <span className="master-logo-sub">Production Environment</span>
@@ -1093,11 +1238,7 @@ export default function DatabaseDesigner({
               </nav>
 
               <div className="master-sidebar-footer">
-                <div className="master-footer-item" onClick={() => showNotification('Configuración abierta')}>
-                  <Settings size={14} />
-                  <span>Configuración</span>
-                </div>
-                <div className="master-footer-item" onClick={() => showNotification('Soporte')}>
+                <div className={`master-footer-item ${activeMasterTab === 'help' ? 'active' : ''}`} onClick={() => { setActiveMasterTab('help'); setOpenFaqIndex(null); }}>
                   <HelpCircle size={14} />
                   <span>Help</span>
                 </div>
@@ -1111,24 +1252,13 @@ export default function DatabaseDesigner({
       {/* Main Container Area */}
       <div className="master-main-container">
         {/* Top Search & Profile Header */}
-        {activeMasterTab !== 'docify' && (
+        {true && (
           <header className="master-top-header">
-            <div className="master-search-bar">
-              <Search size={14} className="search-icon" />
-              <input
-                type="text"
-                placeholder="Search projects, schemas, or docs..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <div className="master-search-bar" style={{ visibility: 'hidden' }}>
+              {/* Search bar removed as per user request */}
             </div>
 
             <div className="master-header-right">
-              <button className="icon-btn notification-bell" onClick={() => showNotification('No hay nuevas notificaciones')} title="Notifications">
-                <Bell size={16} />
-                <span className="bell-badge"></span>
-              </button>
-
               <div className="master-user-profile" title="Ver Perfil" onClick={() => {
                 setActiveMasterTab('profile');
               }}>
@@ -1137,7 +1267,7 @@ export default function DatabaseDesigner({
                   <span className="profile-role">Lead Engineer</span>
                 </div>
                 <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80"
+                  src={localStorage.getItem('profileImageUrl') || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80"}
                   alt="Profile Avatar"
                   className="master-profile-avatar"
                 />
@@ -1147,11 +1277,15 @@ export default function DatabaseDesigner({
         )}
 
         {/* Master Content Area switcher */}
-        <main className="master-content-body">
+        <main className="master-content-body" style={(activeMasterTab === 'bandwidth' || activeMasterTab === 'docify') ? { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'visible' } : {}}>
           {activeMasterTab === 'home' && (
             <DashboardHome
               onNavigateToBlueprint={() => setActiveMasterTab('blueprint')}
+              onNavigateToDocify={() => setActiveMasterTab('docify')}
+              onNavigateToDeepLint={() => setAuthScreen('deeplint')}
               userName={loggedInUserName}
+              tables={tables}
+              teamMembers={teamMembers}
             />
           )}
 
@@ -1160,16 +1294,29 @@ export default function DatabaseDesigner({
 
               {/* Internal header for blueprint actions (Save, Export, Split View) */}
               <div className="blueprint-sub-header">
-                <div className="sub-header-left">
-                  <span className="workspace-title-label">Database Blueprint / visual-schema</span>
-                </div>
-                <div className="sub-header-right">
-                  <button className="icon-btn" title="Share Project" onClick={() => showNotification('Sharing link copied!')}>
-                    <Share2 size={15} />
-                  </button>
-                  <button className="icon-btn" title="Project Settings" onClick={() => showNotification('Settings menu')}>
-                    <Settings size={15} />
-                  </button>
+                {/* sub-header-left removed as per request */}
+                <div className="sub-header-right" style={{ marginLeft: 'auto' }}>
+                  {isSplitView && splitViewMode === 'export' && (
+                    <>
+                      <button
+                        onClick={() => copyToClipboard(generateExportSQL())}
+                        className="btn-secondary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        {copied ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
+                        Copy to Clipboard
+                      </button>
+                      <button
+                        onClick={handleDownloadSQL}
+                        className="btn-secondary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }}
+                      >
+                        <Download size={13} />
+                        Download .sql
+                      </button>
+                      <div style={{ width: '1px', height: '16px', background: '#334155', margin: '0 4px' }}></div>
+                    </>
+                  )}
                   <button
                     className="btn-secondary"
                     style={{
@@ -1192,27 +1339,22 @@ export default function DatabaseDesigner({
                     <Code size={13} />
                     Split View
                   </button>
-                  <button className="btn-secondary" onClick={handleOpenSaveDialog} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Save size={13} />
-                    Save
+                  <div style={{ width: '1px', height: '16px', background: '#334155', margin: '0 4px' }}></div>
+                  <button
+                    className="btn-secondary"
+                    onClick={() => setShowSavedPanel(!showSavedPanel)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <FolderOpen size={13} />
+                    Cargar
                   </button>
                   <button
                     className="btn-primary"
-                    style={{
-                      backgroundColor: (isSplitView && splitViewMode === 'export') ? 'rgba(16, 185, 129, 0.2)' : undefined,
-                      borderColor: (isSplitView && splitViewMode === 'export') ? '#10b981' : undefined,
-                    }}
-                    onClick={() => {
-                      if (isSplitView && splitViewMode === 'export') {
-                        setIsSplitView(false)
-                      } else {
-                        setIsSplitView(true)
-                        setSplitViewMode('export')
-                      }
-                    }}
+                    onClick={handleOpenSaveDialog}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px' }}
                   >
-                    <Download size={14} />
-                    Export
+                    <Save size={13} />
+                    Guardar
                   </button>
                 </div>
               </div>
@@ -1309,198 +1451,15 @@ export default function DatabaseDesigner({
 
                 {isSplitView && splitViewMode === 'export' && (
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                    {/* Export Header */}
-                    <div className="macos-header" style={{ userSelect: 'none' }}>
-                      <div className="macos-left" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div
-                          onClick={() => setIsSplitView(false)}
-                          style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444', cursor: 'pointer', transition: 'opacity 0.2s', position: 'relative' }}
-                          title="Cerrar y volver al canvas"
-                          className="macos-dot-close"
-                        />
-                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b', opacity: 0.8 }} />
-                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#10b981', opacity: 0.8 }} />
-                        <span className="macos-title" style={{ marginLeft: '12px' }}>Script Generator</span>
-                      </div>
-                      <div className="macos-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button className="macos-action-btn active" style={{ cursor: 'default' }}>Export</button>
-                        <button className="macos-action-btn" onClick={() => { setSplitViewMode('dsl') }}>DSL</button>
-                        <button
-                          className="macos-action-btn"
-                          onClick={() => setIsSplitView(false)}
-                          style={{
-                            background: 'rgba(239, 68, 68, 0.1)',
-                            border: '1px solid rgba(239, 68, 68, 0.2)',
-                            color: '#ef4444',
-                            borderRadius: '4px',
-                            padding: '3px 8px',
-                            fontSize: '11px',
-                            marginLeft: '8px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Volver al Canvas
-                        </button>
-                      </div>
-                    </div>
+                    {/* Export Header removed as per user request */}
 
                     {/* Export Body */}
                     <div style={{ display: 'flex', flexDirection: 'row', flex: 1, overflow: 'hidden' }}>
-                      {/* Left: Target DB & Settings */}
-                      <div style={{ width: '220px', borderRight: '1px solid #1e293b', display: 'flex', flexDirection: 'column', padding: '16px 12px', gap: '16px', overflowY: 'auto', background: '#0a0f18' }}>
-                        <div>
-                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>Target Database</span>
-                          {['PostgreSQL', 'MySQL', 'SQLite', 'MongoDB', 'Prisma ORM'].map(db => (
-                            <div
-                              key={db}
-                              onClick={() => setTargetDb(db)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '8px 10px',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                marginBottom: '2px',
-                                fontSize: '12px',
-                                fontWeight: targetDb === db ? 600 : 400,
-                                color: targetDb === db ? '#38bdf8' : '#94a3b8',
-                                background: targetDb === db ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
-                                border: targetDb === db ? '1px solid rgba(56, 189, 248, 0.2)' : '1px solid transparent',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              <Database size={13} />
-                              {db}
-                              {targetDb === db && db === 'PostgreSQL' && (
-                                <span style={{ marginLeft: 'auto', fontSize: '9px', padding: '1px 5px', borderRadius: '3px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>v15</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-
-                        <div style={{ borderTop: '1px solid #131924', paddingTop: '16px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', marginBottom: '12px', display: 'block' }}>Export Settings</span>
-
-                          <div style={{ marginBottom: '12px' }}>
-                            <label style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500, marginBottom: '4px', display: 'block', textTransform: 'uppercase' }}>Schema Name</label>
-                            <input
-                              type="text"
-                              value={schemaName}
-                              onChange={(e) => setSchemaName(e.target.value)}
-                              style={{
-                                width: '100%',
-                                padding: '6px 10px',
-                                background: '#0d1117',
-                                border: '1px solid #1e293b',
-                                borderRadius: '4px',
-                                color: '#e2e8f0',
-                                fontSize: '12px',
-                                outline: 'none',
-                                boxSizing: 'border-box'
-                              }}
-                            />
-                          </div>
-
-                          {[
-                            { label: 'Include DROP statements', checked: includeDrop, onChange: setIncludeDrop },
-                            { label: 'Generate relationships (FK)', checked: generateFK, onChange: setGenerateFK },
-                            { label: 'Include seed data', checked: includeSeed, onChange: setIncludeSeed },
-                          ].map((setting) => (
-                            <label
-                              key={setting.label}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '6px 0',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                color: '#cbd5e1'
-                              }}
-                            >
-                              <div
-                                onClick={() => setting.onChange(!setting.checked)}
-                                style={{
-                                  width: '16px',
-                                  height: '16px',
-                                  borderRadius: '4px',
-                                  border: setting.checked ? '2px solid #38bdf8' : '2px solid #475569',
-                                  background: setting.checked ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  transition: 'all 0.15s ease',
-                                  flexShrink: 0
-                                }}
-                              >
-                                {setting.checked && <Check size={10} style={{ color: '#38bdf8' }} />}
-                              </div>
-                              {setting.label}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
+                      {/* Target DB & Settings Moved to Sidebar */}
 
                       {/* Right: SQL Preview */}
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                        {/* Preview Header */}
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '8px 12px',
-                          borderBottom: '1px solid #1e293b',
-                          background: '#0d1117'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444' }}></span>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b' }}></span>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981' }}></span>
-                            <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '8px' }}>{targetDb} Dialect</span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              onClick={() => copyToClipboard(generateExportSQL())}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 10px',
-                                background: 'rgba(148, 163, 184, 0.08)',
-                                border: '1px solid #334155',
-                                borderRadius: '4px',
-                                color: '#94a3b8',
-                                fontSize: '11px',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              {copied ? <Check size={11} style={{ color: '#10b981' }} /> : <Copy size={11} />}
-                              Copy to Clipboard
-                            </button>
-                            <button
-                              onClick={handleDownloadSQL}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 10px',
-                                background: 'rgba(56, 189, 248, 0.12)',
-                                border: '1px solid rgba(56, 189, 248, 0.3)',
-                                borderRadius: '4px',
-                                color: '#38bdf8',
-                                fontSize: '11px',
-                                cursor: 'pointer',
-                                fontWeight: 600,
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              <Download size={11} />
-                              Download .sql
-                            </button>
-                          </div>
-                        </div>
+                        {/* Preview Header (Actions moved to Top Bar) */}
 
                         {/* SQL Code Preview */}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '16px', background: '#080c14', fontFamily: '"JetBrains Mono", "Fira Code", monospace' }}>
@@ -1875,256 +1834,426 @@ export default function DatabaseDesigner({
                     {/* Right side Properties Panel */}
                     <aside className={`right-panel ${isPropertiesCollapsed ? 'collapsed' : ''}`}>
                       <div
-                          className="properties-toggle-btn"
-                          onClick={() => setIsPropertiesCollapsed(!isPropertiesCollapsed)}
-                          title={isPropertiesCollapsed ? 'Expandir Propiedades' : 'Colapsar Propiedades'}
-                        >
-                          {isPropertiesCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
-                        </div>
-                        {selectedTable ? (
-                          <>
-                            <div className="panel-header">
-                              <h2>Table Properties</h2>
-                              <button className="icon-btn" onClick={() => setSelectedTableId(null)}>
-                                <X size={15} />
-                              </button>
+                        className="properties-toggle-btn"
+                        onClick={() => setIsPropertiesCollapsed(!isPropertiesCollapsed)}
+                        title={isPropertiesCollapsed ? 'Expandir Propiedades' : 'Colapsar Propiedades'}
+                      >
+                        {isPropertiesCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
+                      </div>
+                      {selectedTable ? (
+                        <>
+                          <div className="panel-header">
+                            <h2>Table Properties</h2>
+                            <button className="icon-btn" onClick={() => setSelectedTableId(null)}>
+                              <X size={15} />
+                            </button>
+                          </div>
+
+                          <div className="panel-body">
+                            <div className="form-group">
+                              <label className="form-label">Table Name</label>
+                              <input
+                                type="text"
+                                className="form-input"
+                                value={selectedTable.name}
+                                onChange={(e) => handleUpdateTableMeta({ name: e.target.value })}
+                              />
                             </div>
 
-                            <div className="panel-body">
-                              <div className="form-group">
-                                <label className="form-label">Table Name</label>
-                                <input
-                                  type="text"
-                                  className="form-input"
-                                  value={selectedTable.name}
-                                  onChange={(e) => handleUpdateTableMeta({ name: e.target.value })}
-                                />
+                            <div className="form-group">
+                              <label className="form-label">Table Comment</label>
+                              <textarea
+                                className="form-textarea"
+                                value={selectedTable.comment}
+                                onChange={(e) => handleUpdateTableMeta({ comment: e.target.value })}
+                              />
+                            </div>
+
+                            <div className="form-group">
+                              <div className="section-title-row">
+                                <label className="form-label">Columns ({selectedTable.columns.length})</label>
+                                <button className="btn-link-add" onClick={handleAddColumn}>
+                                  <Plus size={11} />
+                                  Add
+                                </button>
                               </div>
 
-                              <div className="form-group">
-                                <label className="form-label">Table Comment</label>
-                                <textarea
-                                  className="form-textarea"
-                                  value={selectedTable.comment}
-                                  onChange={(e) => handleUpdateTableMeta({ comment: e.target.value })}
-                                />
-                              </div>
+                              <div className="columns-edit-list">
+                                {selectedTable.columns.map((col) => (
+                                  <div key={col.id} className="column-edit-item">
+                                    <div className="column-edit-main">
+                                      <input
+                                        type="text"
+                                        className="form-input"
+                                        style={{ padding: '4px 8px', fontSize: '12px' }}
+                                        value={col.name}
+                                        onChange={(e) => handleUpdateColumn(col.id, { name: e.target.value })}
+                                      />
+                                      <select
+                                        className="form-select"
+                                        value={col.type}
+                                        onChange={(e) => handleUpdateColumn(col.id, { type: e.target.value })}
+                                      >
+                                        {columnTypes.map((t) => (
+                                          <option key={t} value={t}>
+                                            {t}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <button
+                                        className="column-edit-delete"
+                                        onClick={() => handleDeleteColumn(col.id)}
+                                        title="Delete Column"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
 
-                              <div className="form-group">
-                                <div className="section-title-row">
-                                  <label className="form-label">Columns ({selectedTable.columns.length})</label>
-                                  <button className="btn-link-add" onClick={handleAddColumn}>
-                                    <Plus size={11} />
-                                    Add
-                                  </button>
-                                </div>
-
-                                <div className="columns-edit-list">
-                                  {selectedTable.columns.map((col) => (
-                                    <div key={col.id} className="column-edit-item">
-                                      <div className="column-edit-main">
+                                    <div className="column-edit-checkboxes">
+                                      <label className="checkbox-label">
                                         <input
-                                          type="text"
-                                          className="form-input"
-                                          style={{ padding: '4px 8px', fontSize: '12px' }}
-                                          value={col.name}
-                                          onChange={(e) => handleUpdateColumn(col.id, { name: e.target.value })}
+                                          type="checkbox"
+                                          checked={col.isPrimaryKey}
+                                          onChange={(e) =>
+                                            handleUpdateColumn(col.id, {
+                                              isPrimaryKey: e.target.checked,
+                                              isForeignKey: e.target.checked ? false : col.isForeignKey
+                                            })
+                                          }
                                         />
+                                        PK
+                                      </label>
+
+                                      <label className="checkbox-label">
+                                        <input
+                                          type="checkbox"
+                                          checked={col.isForeignKey}
+                                          onChange={(e) =>
+                                            handleUpdateColumn(col.id, {
+                                              isForeignKey: e.target.checked,
+                                              isPrimaryKey: e.target.checked ? false : col.isPrimaryKey,
+                                              foreignKeyTargetTableId: e.target.checked
+                                                ? tables.find((t) => t.id !== selectedTable.id)?.id || ''
+                                                : undefined,
+                                              foreignKeyTargetColumnId: e.target.checked
+                                                ? tables.find((t) => t.id !== selectedTable.id)?.columns[0]?.id || ''
+                                                : undefined
+                                            })
+                                          }
+                                        />
+                                        FK
+                                      </label>
+
+                                      {col.isForeignKey && (
                                         <select
                                           className="form-select"
-                                          value={col.type}
-                                          onChange={(e) => handleUpdateColumn(col.id, { type: e.target.value })}
+                                          style={{ padding: '2px 4px', fontSize: '10px' }}
+                                          value={col.foreignKeyTargetTableId}
+                                          onChange={(e) => {
+                                            const targetTabId = e.target.value
+                                            const targetTableObj = tables.find((t) => t.id === targetTabId)
+                                            handleUpdateColumn(col.id, {
+                                              foreignKeyTargetTableId: targetTabId,
+                                              foreignKeyTargetColumnId: targetTableObj?.columns[0]?.id || ''
+                                            })
+                                          }}
                                         >
-                                          {columnTypes.map((t) => (
-                                            <option key={t} value={t}>
-                                              {t}
-                                            </option>
-                                          ))}
+                                          {tables
+                                            .filter((t) => t.id !== selectedTable.id)
+                                            .map((t) => (
+                                              <option key={t.id} value={t.id}>
+                                                {t.name}
+                                              </option>
+                                            ))}
                                         </select>
-                                        <button
-                                          className="column-edit-delete"
-                                          onClick={() => handleDeleteColumn(col.id)}
-                                          title="Delete Column"
-                                        >
-                                          <Trash2 size={12} />
-                                        </button>
-                                      </div>
-
-                                      <div className="column-edit-checkboxes">
-                                        <label className="checkbox-label">
-                                          <input
-                                            type="checkbox"
-                                            checked={col.isPrimaryKey}
-                                            onChange={(e) =>
-                                              handleUpdateColumn(col.id, {
-                                                isPrimaryKey: e.target.checked,
-                                                isForeignKey: e.target.checked ? false : col.isForeignKey
-                                              })
-                                            }
-                                          />
-                                          PK
-                                        </label>
-
-                                        <label className="checkbox-label">
-                                          <input
-                                            type="checkbox"
-                                            checked={col.isForeignKey}
-                                            onChange={(e) =>
-                                              handleUpdateColumn(col.id, {
-                                                isForeignKey: e.target.checked,
-                                                isPrimaryKey: e.target.checked ? false : col.isPrimaryKey,
-                                                foreignKeyTargetTableId: e.target.checked
-                                                  ? tables.find((t) => t.id !== selectedTable.id)?.id || ''
-                                                  : undefined,
-                                                foreignKeyTargetColumnId: e.target.checked
-                                                  ? tables.find((t) => t.id !== selectedTable.id)?.columns[0]?.id || ''
-                                                  : undefined
-                                              })
-                                            }
-                                          />
-                                          FK
-                                        </label>
-
-                                        {col.isForeignKey && (
-                                          <select
-                                            className="form-select"
-                                            style={{ padding: '2px 4px', fontSize: '10px' }}
-                                            value={col.foreignKeyTargetTableId}
-                                            onChange={(e) => {
-                                              const targetTabId = e.target.value
-                                              const targetTableObj = tables.find((t) => t.id === targetTabId)
-                                              handleUpdateColumn(col.id, {
-                                                foreignKeyTargetTableId: targetTabId,
-                                                foreignKeyTargetColumnId: targetTableObj?.columns[0]?.id || ''
-                                              })
-                                            }}
-                                          >
-                                            {tables
-                                              .filter((t) => t.id !== selectedTable.id)
-                                              .map((t) => (
-                                                <option key={t.id} value={t.id}>
-                                                  {t.name}
-                                                </option>
-                                              ))}
-                                          </select>
-                                        )}
-                                      </div>
+                                      )}
                                     </div>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <div className="form-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-                                <label className="form-label">Engine Settings</label>
-                                <div className="toggle-row">
-                                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Audit Logging</span>
-                                  <label className="switch">
-                                    <input
-                                      type="checkbox"
-                                      checked={auditLogging}
-                                      onChange={(e) => setAuditLogging(e.target.checked)}
-                                    />
-                                    <span className="slider" />
-                                  </label>
-                                </div>
-                              </div>
-
-                              <div className="sql-preview-container">
-                                <div className="sql-header">
-                                  <span className="form-label">SQL Preview</span>
-                                  <button
-                                    className="icon-btn"
-                                    onClick={() => copyToClipboard(generateSQL(selectedTable))}
-                                    title="Copy SQL"
-                                  >
-                                    {copied ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
-                                  </button>
-                                </div>
-                                <pre className="sql-box">
-                                  <span className="sql-keyword">CREATE TABLE</span> <span className="sql-string">"{selectedTable.name}"</span> ({"\n"}
-                                  {selectedTable.columns.map((c, idx) => {
-                                    let typeStr = c.type
-                                    if (c.type === 'String') typeStr = 'UUID'
-                                    if (c.type === 'Decimal') typeStr = 'DECIMAL(10,2)'
-                                    const isLast = idx === selectedTable.columns.length - 1
-                                    return (
-                                      <span key={c.id}>
-                                        {"  "}<span className="sql-string">"{c.name}"</span> <span className="sql-type">{typeStr.toUpperCase()}</span>
-                                        {c.isPrimaryKey && <span className="sql-keyword"> PRIMARY KEY</span>}
-                                        {!isLast && ","}{"\n"}
-                                      </span>
-                                    )
-                                  })}
-                                  );
-                                </pre>
+                                  </div>
+                                ))}
                               </div>
                             </div>
-                          </>
-                        ) : (
-                          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                            <h3>No Table Selected</h3>
-                            <p style={{ fontSize: '12px' }}>Click a table in the canvas to inspect its properties.</p>
-                          </div>
-                        )}
-                      </aside>
-                    </>
-                )}
-                  </div>
 
+                            <div className="form-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                              <label className="form-label">Engine Settings</label>
+                              <div className="toggle-row">
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Audit Logging</span>
+                                <label className="switch">
+                                  <input
+                                    type="checkbox"
+                                    checked={auditLogging}
+                                    onChange={(e) => setAuditLogging(e.target.checked)}
+                                  />
+                                  <span className="slider" />
+                                </label>
+                              </div>
+                            </div>
+
+                            <div className="sql-preview-container">
+                              <div className="sql-header">
+                                <span className="form-label">SQL Preview</span>
+                                <button
+                                  className="icon-btn"
+                                  onClick={() => copyToClipboard(generateSQL(selectedTable))}
+                                  title="Copy SQL"
+                                >
+                                  {copied ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
+                                </button>
+                              </div>
+                              <pre className="sql-box">
+                                <span className="sql-keyword">CREATE TABLE</span> <span className="sql-string">"{selectedTable.name}"</span> ({"\n"}
+                                {selectedTable.columns.map((c, idx) => {
+                                  let typeStr = c.type
+                                  if (c.type === 'String') typeStr = 'UUID'
+                                  if (c.type === 'Decimal') typeStr = 'DECIMAL(10,2)'
+                                  const isLast = idx === selectedTable.columns.length - 1
+                                  return (
+                                    <span key={c.id}>
+                                      {"  "}<span className="sql-string">"{c.name}"</span> <span className="sql-type">{typeStr.toUpperCase()}</span>
+                                      {c.isPrimaryKey && <span className="sql-keyword"> PRIMARY KEY</span>}
+                                      {!isLast && ","}{"\n"}
+                                    </span>
+                                  )
+                                })}
+                                );
+                              </pre>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          <h3>No Table Selected</h3>
+                          <p style={{ fontSize: '12px' }}>Click a table in the canvas to inspect its properties.</p>
+                        </div>
+                      )}
+                    </aside>
+                  </>
+                )}
               </div>
+
+            </div>
           )}
 
-              {activeMasterTab !== 'home' && activeMasterTab !== 'blueprint' && activeMasterTab !== 'profile' && activeMasterTab !== 'docify' && activeMasterTab !== 'mergeguard' && activeMasterTab !== 'bandwidth' && (
-                <div className="placeholder-tab-content" style={{ padding: '40px', color: 'var(--text-muted)', textAlign: 'center' }}>
-                  <h2>{activeMasterTab.toUpperCase()} Module</h2>
-                  <p style={{ fontSize: '14px', marginTop: '8px' }}>This component is fully active and synchronized with production environment.</p>
+          {activeMasterTab !== 'home' && activeMasterTab !== 'blueprint' && activeMasterTab !== 'profile' && activeMasterTab !== 'docify' && activeMasterTab !== 'mergeguard' && activeMasterTab !== 'bandwidth' && activeMasterTab !== 'help' && (
+            <div className="placeholder-tab-content" style={{ padding: '40px', color: 'var(--text-muted)', textAlign: 'center' }}>
+              <h2>{activeMasterTab.toUpperCase()} Module</h2>
+              <p style={{ fontSize: '14px', marginTop: '8px' }}>This component is fully active and synchronized with production environment.</p>
+            </div>
+          )}
+
+          {activeMasterTab === 'bandwidth' && (
+            <StackAgent onBack={() => setActiveMasterTab('home')} members={teamMembers} setMembers={setTeamMembers} />
+          )}
+
+          {activeMasterTab === 'mergeguard' && (
+            <MergeGuard />
+          )}
+
+          {activeMasterTab === 'docify' && (
+            <DocifyView
+              tables={tables}
+              showNotification={showNotification}
+              onBack={() => setActiveMasterTab('home')}
+            />
+          )}
+
+          {activeMasterTab === 'profile' && (
+            <UserProfileView
+              userName={loggedInUserName}
+              setAuthScreen={setAuthScreen}
+              showNotification={showNotification}
+            />
+          )}
+
+          {activeMasterTab === 'help' && (
+            <div className="help-faq-container">
+              <div className="help-faq-header">
+                <div className="help-faq-header-icon">
+                  <BookOpen size={28} />
                 </div>
-              )}
+                <h1>Centro de Ayuda</h1>
+                <p>Encuentra respuestas a las preguntas más frecuentes sobre DevSync y sus herramientas.</p>
+              </div>
 
-              {activeMasterTab === 'bandwidth' && (
-                <StackAgent onBack={() => setActiveMasterTab('home')} />
-              )}
+              <div className="help-faq-sections">
+                {/* General */}
+                <div className="help-faq-section">
+                  <h2 className="help-faq-section-title">
+                    <MessageCircle size={16} />
+                    General
+                  </h2>
+                  {[
+                    { q: '¿Qué es DevSync?', a: 'DevSync es una suite de herramientas de productividad para desarrolladores. Integra un diseñador visual de bases de datos, un asistente de tareas con IA, análisis estático de código, protección de merges, generación de documentación y sincronización de ramas de Git — todo en una sola plataforma.' },
+                    { q: '¿Necesito crear una cuenta para usar DevSync?', a: 'Sí, necesitas registrarte con un nombre de usuario y contraseña. Una vez autenticado, tendrás acceso a todas las herramientas desde el Dashboard principal.' },
+                    { q: '¿Es gratuito?', a: 'DevSync es un proyecto open-source desarrollado durante un hackathon. Todas las funcionalidades están disponibles sin costo.' },
+                    { q: '¿Qué tecnologías usa DevSync?', a: 'El front-end usa React con Vite y TypeScript. El back-end usa Express.js con Prisma ORM y SQLite. Todo está containerizado con Docker Compose. Además integra APIs de OpenAI y Anthropic para las funciones de IA.' },
+                  ].map((faq, i) => {
+                    const idx = i;
+                    return (
+                      <div key={idx} className={`help-faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
+                        <button className="help-faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}>
+                          <span>{faq.q}</span>
+                          {openFaqIndex === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {openFaqIndex === idx && <div className="help-faq-answer">{faq.a}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
 
-              {activeMasterTab === 'mergeguard' && (
-                <MergeGuard />
-              )}
+                {/* Database Designer */}
+                <div className="help-faq-section">
+                  <h2 className="help-faq-section-title">
+                    <Database size={16} />
+                    Database Designer (Blueprint)
+                  </h2>
+                  {[
+                    { q: '¿Cómo creo una nueva tabla?', a: 'Haz clic en el botón "+ Add Table" en la barra lateral izquierda del Blueprint. Se creará una nueva tabla con una columna ID por defecto que puedes arrastrar y personalizar en el canvas.' },
+                    { q: '¿Cómo establezco relaciones entre tablas?', a: 'Para crear una relación (Foreign Key), haz clic en el ícono de link junto a una columna y arrástralo hasta la columna objetivo en otra tabla. La línea de relación aparecerá automáticamente en el canvas.' },
+                    { q: '¿Qué bases de datos puedo exportar?', a: 'Puedes exportar tu esquema a PostgreSQL, MySQL, SQLite, MongoDB (Mongoose schemas) y Prisma ORM. Cada exportación genera el script optimizado para ese motor específico.' },
+                    { q: '¿Puedo importar un esquema existente?', a: 'Sí, usa el editor de código en la vista Split del Blueprint. DevSync usa una sintaxis shorthand propia que puedes escribir o pegar para generar tablas automáticamente.' },
+                    { q: '¿Cómo agrego índices personalizados?', a: 'En el panel lateral derecho del Blueprint, ve a la pestaña "INDEXES". Ahí puedes seleccionar tabla y columna para crear índices personalizados que se incluirán en el script exportado.' },
+                  ].map((faq, i) => {
+                    const idx = 100 + i;
+                    return (
+                      <div key={idx} className={`help-faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
+                        <button className="help-faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}>
+                          <span>{faq.q}</span>
+                          {openFaqIndex === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {openFaqIndex === idx && <div className="help-faq-answer">{faq.a}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
 
-              {activeMasterTab === 'docify' && (
-                <DocifyView
-                  tables={tables}
-                  showNotification={showNotification}
-                  onBack={() => setActiveMasterTab('home')}
-                />
-              )}
+                {/* StackAgent */}
+                <div className="help-faq-section">
+                  <h2 className="help-faq-section-title">
+                    <Users size={16} />
+                    StackAgent (Bandwidth)
+                  </h2>
+                  {[
+                    { q: '¿Qué es el StackAgent?', a: 'Es un asistente inteligente de distribución de tareas. Analiza la carga de trabajo de tu equipo y sugiere la mejor forma de asignar tareas para mantener un balance equitativo y prevenir el burnout.' },
+                    { q: '¿Cómo agrego miembros a mi equipo?', a: 'Desde el módulo Bandwidth puedes agregar miembros del equipo con su nombre y rol. Estos miembros se usarán para la distribución inteligente de tareas.' },
+                    { q: '¿Cómo funciona la distribución de tareas?', a: 'Ingresa las tareas pendientes y los miembros disponibles. La IA analiza la complejidad de cada tarea y la capacidad de cada miembro para sugerir la asignación más equilibrada posible.' },
+                  ].map((faq, i) => {
+                    const idx = 200 + i;
+                    return (
+                      <div key={idx} className={`help-faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
+                        <button className="help-faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}>
+                          <span>{faq.q}</span>
+                          {openFaqIndex === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {openFaqIndex === idx && <div className="help-faq-answer">{faq.a}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
 
-              {activeMasterTab === 'profile' && (
-                <UserProfileView
-                  userName={loggedInUserName}
-                  setAuthScreen={setAuthScreen}
-                  showNotification={showNotification}
-                />
-              )}
-            </main>
+                {/* DeepLint */}
+                <div className="help-faq-section">
+                  <h2 className="help-faq-section-title">
+                    <Sparkles size={16} />
+                    DeepLint
+                  </h2>
+                  {[
+                    { q: '¿Qué hace DeepLint?', a: 'DeepLint es una herramienta de análisis estático de código potenciada con inteligencia artificial. Detecta errores, malas prácticas, vulnerabilidades de seguridad y oportunidades de optimización en tu código.' },
+                    { q: '¿Qué lenguajes soporta?', a: 'DeepLint puede analizar código en TypeScript, JavaScript, Python, Java, C# y otros lenguajes populares. Puedes pegar código directamente o subir archivos para su análisis.' },
+                    { q: '¿Puedo aplicar las correcciones automáticamente?', a: 'DeepLint muestra sugerencias detalladas con el código corregido. Puedes copiar las correcciones sugeridas y aplicarlas en tu editor.' },
+                  ].map((faq, i) => {
+                    const idx = 300 + i;
+                    return (
+                      <div key={idx} className={`help-faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
+                        <button className="help-faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}>
+                          <span>{faq.q}</span>
+                          {openFaqIndex === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {openFaqIndex === idx && <div className="help-faq-answer">{faq.a}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* MergeGuard */}
+                <div className="help-faq-section">
+                  <h2 className="help-faq-section-title">
+                    <GitBranch size={16} />
+                    MergeGuard & BranchTree
+                  </h2>
+                  {[
+                    { q: '¿Qué es MergeGuard?', a: 'MergeGuard es un protector visual de merges que analiza las ramas de tu repositorio GitHub y te advierte sobre posibles conflictos antes de que ocurran. Incluye una visualización interactiva tipo árbol bioluminiscente.' },
+                    { q: '¿Cómo conecto mi repositorio de GitHub?', a: 'Necesitas configurar un GitHub Access Token en las variables de entorno del backend (GITHUB_ACCESS_TOKEN). Una vez configurado, puedes ingresar el nombre del repositorio en formato owner/repo.' },
+                    { q: '¿Qué diferencia hay entre MergeGuard y BranchTree?', a: 'MergeGuard se enfoca en detectar y prevenir conflictos de merge. BranchTree es un sincronizador visual que monitorea las ramas y te alerta si necesitas hacer pull de cambios recientes de la rama principal.' },
+                  ].map((faq, i) => {
+                    const idx = 400 + i;
+                    return (
+                      <div key={idx} className={`help-faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
+                        <button className="help-faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}>
+                          <span>{faq.q}</span>
+                          {openFaqIndex === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {openFaqIndex === idx && <div className="help-faq-answer">{faq.a}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Docify */}
+                <div className="help-faq-section">
+                  <h2 className="help-faq-section-title">
+                    <FileText size={16} />
+                    Docify (Generador de Documentación)
+                  </h2>
+                  {[
+                    { q: '¿Qué hace Docify?', a: 'Docify lee tu código fuente y genera automáticamente un archivo README.md bien estructurado. Explica el propósito de cada componente principal de tu proyecto con documentación clara y profesional.' },
+                    { q: '¿Qué necesito para generar documentación?', a: 'Solo necesitas tener archivos de código en tu proyecto. Docify escanea los archivos .ts, .tsx, .js, .jsx y .css, y usa IA para generar la documentación automáticamente.' },
+                    { q: '¿Puedo personalizar el output?', a: 'Sí, puedes editar el README generado directamente desde la interfaz antes de descargarlo o copiarlo.' },
+                  ].map((faq, i) => {
+                    const idx = 500 + i;
+                    return (
+                      <div key={idx} className={`help-faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
+                        <button className="help-faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}>
+                          <span>{faq.q}</span>
+                          {openFaqIndex === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {openFaqIndex === idx && <div className="help-faq-answer">{faq.a}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+              </div>
+
+              <div className="help-faq-footer">
+                <p>¿No encontraste lo que buscabas?</p>
+                <button className="help-contact-btn" onClick={() => showNotification('Soporte contactado — te responderemos pronto')}>
+                  <MessageCircle size={14} />
+                  Contactar Soporte
+                </button>
+              </div>
+            </div>
+          )}
+        </main>
 
         {/* Master Bottom Status Bar */}
-          <footer className="master-bottom-status-bar">
-            <div className="status-left">
-              <span className="status-indicator">
-                <span className="status-dot green"></span>
-                Gateway: Connected
-              </span>
-              <span className="status-separator">•</span>
-              <span className="status-branch" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <GitBranch size={11} />
-                main @ 7f2a1b9
-              </span>
-            </div>
-            <div className="status-right">
-              <span>UTC: {new Date().toISOString().slice(11, 19)}</span>
-              <span className="status-separator">•</span>
-              <span>Node: v18.12.1</span>
-            </div>
-          </footer>
+        <footer className="master-bottom-status-bar">
+          <div className="status-left">
+            <span className="status-indicator">
+              <span className="status-dot green"></span>
+              Gateway: Connected
+            </span>
+            <span className="status-separator">•</span>
+            <span className="status-branch" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <GitBranch size={11} />
+              main @ 7f2a1b9
+            </span>
+          </div>
+          <div className="status-right">
+            <span>UTC: {new Date().toISOString().slice(11, 19)}</span>
+            <span className="status-separator">•</span>
+            <span>Node: v18.12.1</span>
+          </div>
+        </footer>
       </div>
     </div>
   )

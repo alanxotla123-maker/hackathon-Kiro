@@ -6,7 +6,6 @@
   background-color: #0d1117;
   color: #e2e8f0;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  overflow: hidden;
 }
 
 .stackagent-header {
@@ -29,36 +28,40 @@
 }
 
 .title-text h1 {
-  font-size: 20px;
+  font-size: 13px;
   font-weight: 700;
-  margin: 0 0 4px 0;
+  margin: 0 0 0 0;
   color: #f8fafc;
+  letter-spacing: -0.2px;
 }
 
 .title-text .subtitle {
-  font-size: 10px;
+  font-size: 9px;
   color: #64748b;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  font-family: monospace;
+  font-family: var(--font-mono, monospace);
+  letter-spacing: normal;
 }
 
 .stackagent-content {
   display: flex;
   flex: 1;
-  overflow: hidden;
 }
 
 /* Sidebar */
 .stackagent-sidebar {
-  width: 320px;
-  padding: 24px;
-  border-right: 1px solid #1e293b;
+  width: 240px;
+  padding: 0;
+  border-right: 1px solid #131924;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  background-color: #0f141b;
+  background-color: #0b0f17;
   overflow-y: auto;
+  
+  /* Pull sidebar up to cover master-top-header empty space */
+  margin-top: -57px;
+  height: calc(100% + 57px);
+  position: relative;
+  z-index: 10;
 }
 
 .section-block {

@@ -16,8 +16,7 @@ export default function Login({
   setAuthInputs,
   authMessage,
   setAuthMessage,
-  setAuthScreen,
-  showNotification
+  setAuthScreen
 }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false)
 
@@ -90,8 +89,7 @@ export default function Login({
       }
       setAuthMessage(null)
       localStorage.setItem('userFullName', data.user.name)
-      setAuthScreen('workspace')
-      showNotification(`Bienvenido ${data.user.name}`)
+      setAuthScreen('loginSuccess')
     } catch (err) {
       setAuthMessage({ type: 'error', text: 'Connection error' })
     }
@@ -130,7 +128,7 @@ export default function Login({
             Sign in with GitHub
           </button>
 
-          <button 
+          <button
             className="w-full bg-white text-gray-700 font-medium py-[10px] px-4 rounded-md border border-gray-300 shadow-sm hover:bg-gray-50 hover:shadow-md transition-all duration-200 flex items-center justify-center"
             onClick={handleGoogleLogin}
           >
@@ -153,9 +151,9 @@ export default function Login({
             </div>
             <div className={`auth-input-wrapper ${isError ? 'conflict-border' : ''}`}>
               <User size={16} className="auth-input-icon" />
-              <input 
-                type="email" 
-                placeholder="developer@domain.com" 
+              <input
+                type="email"
+                placeholder="developer@domain.com"
                 className="auth-input"
                 value={authInputs.username}
                 onChange={(e) => setAuthInputs((prev: any) => ({ ...prev, username: e.target.value }))}
@@ -173,9 +171,9 @@ export default function Login({
             </div>
             <div className={`auth-input-wrapper ${isError ? 'conflict-border' : ''}`}>
               <Lock size={16} className="auth-input-icon" />
-              <input 
-                type={showPassword ? 'text' : 'password'} 
-                placeholder="••••••••" 
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
                 className="auth-input"
                 value={authInputs.password}
                 onChange={(e) => setAuthInputs((prev: any) => ({ ...prev, password: e.target.value }))}

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FileText, Loader2, Download, GitBranch, Link2, Activity, Check, Settings, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Loader2, Download, GitBranch, Link2, Activity, Check, Settings, ArrowLeft, Save, FolderOpen, X, Trash2 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import ReactMarkdown from 'react-markdown';
 import type { Table } from './types';
@@ -18,6 +18,74 @@ export const DocifyView: React.FC<DocifyViewProps> = ({ tables, showNotification
   const [docifyRealLanguages, setDocifyRealLanguages] = useState<string>('');
   const [docifyRealFiles, setDocifyRealFiles] = useState<Array<{name: string, type: string}>>([]);
   const [docifyLLMResponse, setDocifyLLMResponse] = useState<string>('');
+
+  const [savedDocs, setSavedDocs] = useState<any[]>([]);
+  const [showSavedPanel, setShowSavedPanel] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveDialogName, setSaveDialogName] = useState('');
+
+  useEffect(() => {
+    const fetchDocs = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/api/doc-generator/docs');
+        if (res.ok) {
+          const docs = await res.json();
+          setSavedDocs(docs);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchDocs();
+  }, []);
+
+  const handleConfirmSave = async () => {
+    if (!saveDialogName.trim() || !docifyLLMResponse.trim()) {
+      showNotification('Necesitas generar un análisis primero y darle un nombre.');
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:3000/api/doc-generator/docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: saveDialogName,
+          repoUrl: docifyRepoUrl,
+          generatedReadme: docifyLLMResponse
+        })
+      });
+      if (res.ok) {
+        const newDoc = await res.json();
+        setSavedDocs([newDoc, ...savedDocs]);
+        setSaveDialogOpen(false);
+        setSaveDialogName('');
+        showNotification('Documentación guardada exitosamente.');
+      }
+    } catch (e) {
+      console.error(e);
+      showNotification('Error al guardar la documentación.');
+    }
+  };
+
+  const handleLoadDoc = (doc: any) => {
+    setDocifyRepoUrl(doc.repoUrl);
+    setDocifyLLMResponse(doc.generatedReadme);
+    setDocifyStatus('ready');
+    setDocifyLoadingStep(5);
+    setShowSavedPanel(false);
+    showNotification('Documentación cargada.');
+  };
+
+  const handleDeleteDoc = async (id: number) => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/doc-generator/docs/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setSavedDocs(savedDocs.filter(d => d.id !== id));
+      }
+    } catch(e) {
+      console.error(e);
+    }
+  };
 
   const startDocifyAnalysis = async () => {
     if (!docifyRepoUrl.trim()) {
@@ -263,86 +331,19 @@ Fecha de generación: ${new Date().toLocaleDateString()}
   };
 
   return (
-    <div className="docify-workspace-container" style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '24px', gap: '20px', height: '100vh', overflow: 'hidden', background: '#0a0f1d', color: '#e2e8f0', boxSizing: 'border-box' }}>
+    <div className="docify-workspace-container" style={{ display: 'flex', flexDirection: 'row', flex: 1, height: '100%', boxSizing: 'border-box' }}>
       
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        background: 'rgba(30, 41, 59, 0.4)',
-        border: '1px solid #1e293b',
-        borderRadius: '8px',
-        padding: '8px 16px',
-        width: '100%',
-        boxSizing: 'border-box'
-      }}>
-        {onBack && (
-          <button 
-            onClick={onBack}
-            style={{
-              background: 'transparent', border: '1px solid #334155', borderRadius: '6px', 
-              color: '#94a3b8', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
-            }}
-          >
-            <ArrowLeft size={16} />
-          </button>
-        )}
-        <Link2 size={16} style={{ color: '#64748b' }} />
-        <input
-          type="text"
-          value={docifyRepoUrl}
-          onChange={(e) => setDocifyRepoUrl(e.target.value)}
-          placeholder="https://github.com/usuario/repo-name"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: '#f8fafc',
-            flex: 1,
-            fontSize: '13px',
-            outline: 'none'
-          }}
-        />
-        <button
-          onClick={startDocifyAnalysis}
-          disabled={docifyStatus !== 'idle' && docifyStatus !== 'ready'}
-          style={{
-            background: (docifyStatus !== 'idle' && docifyStatus !== 'ready') ? '#1e293b' : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '8px 24px',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: (docifyStatus !== 'idle' && docifyStatus !== 'ready') ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.2s ease',
-            boxShadow: (docifyStatus !== 'idle' && docifyStatus !== 'ready') ? 'none' : '0 4px 12px rgba(59, 130, 246, 0.25)'
-          }}
-        >
-          {docifyStatus !== 'idle' && docifyStatus !== 'ready' ? (
-            <Loader2 size={13} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
-          ) : (
-            <Activity size={13} />
-          )}
-          Analyze
-        </button>
-      </div>
+      {/* Left Sidebar */}
+      <aside className="stackagent-sidebar">
+        <div className="master-sidebar-logo-group" style={{ cursor: 'pointer', borderBottom: '1px solid #131924' }} onClick={onBack}>
+          <ArrowLeft size={16} style={{ color: '#94a3b8', marginRight: '8px' }} />
+          <div className="master-logo-text-group">
+            <span className="master-logo-text" style={{ fontSize: '13px' }}>Docify</span>
+            <span className="master-logo-sub">doc-generator</span>
+          </div>
+        </div>
 
-      <div style={{ display: 'flex', gap: '20px', flex: 1, overflow: 'hidden' }}>
-        
-        <div style={{
-          width: '320px',
-          background: 'rgba(15, 23, 42, 0.4)',
-          border: '1px solid #1e293b',
-          borderRadius: '12px',
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '24px',
-          boxSizing: 'border-box'
-        }}>
+        <div style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', flex: 1 }}>
           <div>
             <h3 style={{
               fontSize: '11px',
@@ -510,11 +511,86 @@ Fecha de generación: ${new Date().toLocaleDateString()}
               Infrastructure v2.4 running with signature extraction enabled.
             </p>
           </div>
+        </div>
+      </aside>
 
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: '24px', gap: '20px', overflow: 'hidden', boxSizing: 'border-box' }}>
+        
+        {/* Top Header */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          background: 'rgba(30, 41, 59, 0.4)',
+          border: '1px solid #1e293b',
+          borderRadius: '8px',
+          padding: '8px 16px',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          <Link2 size={16} style={{ color: '#64748b' }} />
+          <input
+            type="text"
+            value={docifyRepoUrl}
+            onChange={(e) => setDocifyRepoUrl(e.target.value)}
+            placeholder="https://github.com/usuario/repo-name"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#f8fafc',
+              flex: 1,
+              fontSize: '13px',
+              outline: 'none'
+            }}
+          />
+          <button
+            onClick={startDocifyAnalysis}
+            disabled={docifyStatus !== 'idle' && docifyStatus !== 'ready'}
+            style={{
+              background: (docifyStatus !== 'idle' && docifyStatus !== 'ready') ? '#1e293b' : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '8px 24px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: (docifyStatus !== 'idle' && docifyStatus !== 'ready') ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+              boxShadow: (docifyStatus !== 'idle' && docifyStatus !== 'ready') ? 'none' : '0 4px 12px rgba(59, 130, 246, 0.25)'
+            }}
+          >
+            {docifyStatus !== 'idle' && docifyStatus !== 'ready' ? (
+              <Loader2 size={13} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
+            ) : (
+              <Activity size={13} />
+            )}
+            Analyze
+          </button>
+          
+          <div style={{ width: '1px', height: '16px', background: '#334155', margin: '0 8px' }}></div>
+          <button 
+            onClick={() => setShowSavedPanel(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: '1px solid #334155', color: '#e2e8f0', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+          >
+            <FolderOpen size={13} />
+            Cargar
+          </button>
+          <button 
+            onClick={() => setSaveDialogOpen(true)}
+            disabled={!docifyLLMResponse.trim()}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: docifyLLMResponse.trim() ? '#38bdf8' : '#1e293b', color: docifyLLMResponse.trim() ? '#0f172a' : '#475569', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: docifyLLMResponse.trim() ? 'pointer' : 'not-allowed', fontSize: '12px', fontWeight: 'bold' }}
+          >
+            <Save size={13} />
+            Guardar
+          </button>
         </div>
 
         <div style={{
           flex: 1,
+          minHeight: 0,
           background: 'rgba(15, 23, 42, 0.4)',
           border: '1px solid #1e293b',
           borderRadius: '12px',
@@ -555,6 +631,7 @@ Fecha de generación: ${new Date().toLocaleDateString()}
 
           <div style={{
             flex: 1,
+            minHeight: 0,
             display: 'flex',
             alignItems: docifyStatus === 'ready' ? 'flex-start' : 'center',
             justifyContent: 'center',
@@ -704,6 +781,75 @@ Fecha de generación: ${new Date().toLocaleDateString()}
           </div>
         </div>
       </div>
+
+      {/* Save Dialog Modal */}
+      {saveDialogOpen && (
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="modal-content" style={{ background: '#0f172a', padding: '24px', borderRadius: '12px', border: '1px solid #1e293b', width: '400px', maxWidth: '90%' }}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, color: '#f8fafc', fontSize: '16px' }}>Guardar Documentación</h3>
+              <button onClick={() => setSaveDialogOpen(false)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+                <X size={16} />
+              </button>
+            </div>
+            <div className="form-group" style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '8px' }}>Nombre del guardado</label>
+              <input 
+                type="text" 
+                placeholder="Ej. Backend Docs v1..." 
+                value={saveDialogName} 
+                onChange={(e) => setSaveDialogName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleConfirmSave() }}
+                autoFocus
+                style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', color: '#f8fafc', padding: '10px 12px', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button onClick={() => setSaveDialogOpen(false)} style={{ background: 'transparent', border: '1px solid #334155', color: '#e2e8f0', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>Cancelar</button>
+              <button onClick={handleConfirmSave} disabled={!saveDialogName.trim()} style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: saveDialogName.trim() ? 'pointer' : 'not-allowed', fontSize: '13px', fontWeight: 'bold' }}>
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saved Docs Panel Modal */}
+      {showSavedPanel && (
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="modal-content" style={{ background: '#0f172a', padding: '24px', borderRadius: '12px', border: '1px solid #1e293b', width: '500px', maxWidth: '90%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, color: '#f8fafc', fontSize: '16px' }}>Documentos Guardados</h3>
+              <button onClick={() => setShowSavedPanel(false)} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+                <X size={16} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+              {savedDocs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b', fontSize: '14px' }}>No hay documentos guardados.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {savedDocs.map(doc => (
+                    <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: '#1e293b', borderRadius: '8px', border: '1px solid #334155' }}>
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ fontWeight: 600, fontSize: '14px', color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.name}</div>
+                        <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.repoUrl}</div>
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>{new Date(doc.updatedAt).toLocaleString()}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', marginLeft: '16px' }}>
+                        <button onClick={() => handleLoadDoc(doc)} style={{ background: '#38bdf8', color: '#0f172a', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Cargar</button>
+                        <button onClick={() => handleDeleteDoc(doc.id)} style={{ background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', padding: '8px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
