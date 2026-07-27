@@ -30,7 +30,11 @@ import {
   Clock,
   LayoutGrid,
   Users,
-  Wand2
+  Wand2,
+  ChevronDown,
+  ChevronUp,
+  MessageCircle,
+  BookOpen
 } from 'lucide-react'
 import logoImg from '../../logo/logo.jpeg'
 import { DashboardHome } from '../Dashboard/DashboardHome'
@@ -89,7 +93,8 @@ export default function DatabaseDesigner({
   ])
 
   // UI state
-  const [activeMasterTab, setActiveMasterTab] = useState<'home' | 'blueprint' | 'bandwidth' | 'mergeguard' | 'docify' | 'deeplint' | 'profile'>('home')
+  const [activeMasterTab, setActiveMasterTab] = useState<'home' | 'blueprint' | 'bandwidth' | 'mergeguard' | 'docify' | 'deeplint' | 'profile' | 'help'>('home')
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null)
   const [selectedTableId, setSelectedTableId] = useState<string | null>('orders')
   const [selectedRelationId, setSelectedRelationId] = useState<string | null>(null)
 
@@ -1233,11 +1238,7 @@ export default function DatabaseDesigner({
               </nav>
 
               <div className="master-sidebar-footer">
-                <div className="master-footer-item" onClick={() => showNotification('Configuración abierta')}>
-                  <Settings size={14} />
-                  <span>Configuración</span>
-                </div>
-                <div className="master-footer-item" onClick={() => showNotification('Soporte')}>
+                <div className={`master-footer-item ${activeMasterTab === 'help' ? 'active' : ''}`} onClick={() => { setActiveMasterTab('help'); setOpenFaqIndex(null); }}>
                   <HelpCircle size={14} />
                   <span>Help</span>
                 </div>
@@ -2032,7 +2033,7 @@ export default function DatabaseDesigner({
             </div>
           )}
 
-          {activeMasterTab !== 'home' && activeMasterTab !== 'blueprint' && activeMasterTab !== 'profile' && activeMasterTab !== 'docify' && activeMasterTab !== 'mergeguard' && activeMasterTab !== 'bandwidth' && (
+          {activeMasterTab !== 'home' && activeMasterTab !== 'blueprint' && activeMasterTab !== 'profile' && activeMasterTab !== 'docify' && activeMasterTab !== 'mergeguard' && activeMasterTab !== 'bandwidth' && activeMasterTab !== 'help' && (
             <div className="placeholder-tab-content" style={{ padding: '40px', color: 'var(--text-muted)', textAlign: 'center' }}>
               <h2>{activeMasterTab.toUpperCase()} Module</h2>
               <p style={{ fontSize: '14px', marginTop: '8px' }}>This component is fully active and synchronized with production environment.</p>
@@ -2061,6 +2062,176 @@ export default function DatabaseDesigner({
               setAuthScreen={setAuthScreen}
               showNotification={showNotification}
             />
+          )}
+
+          {activeMasterTab === 'help' && (
+            <div className="help-faq-container">
+              <div className="help-faq-header">
+                <div className="help-faq-header-icon">
+                  <BookOpen size={28} />
+                </div>
+                <h1>Centro de Ayuda</h1>
+                <p>Encuentra respuestas a las preguntas más frecuentes sobre DevSync y sus herramientas.</p>
+              </div>
+
+              <div className="help-faq-sections">
+                {/* General */}
+                <div className="help-faq-section">
+                  <h2 className="help-faq-section-title">
+                    <MessageCircle size={16} />
+                    General
+                  </h2>
+                  {[
+                    { q: '¿Qué es DevSync?', a: 'DevSync es una suite de herramientas de productividad para desarrolladores. Integra un diseñador visual de bases de datos, un asistente de tareas con IA, análisis estático de código, protección de merges, generación de documentación y sincronización de ramas de Git — todo en una sola plataforma.' },
+                    { q: '¿Necesito crear una cuenta para usar DevSync?', a: 'Sí, necesitas registrarte con un nombre de usuario y contraseña. Una vez autenticado, tendrás acceso a todas las herramientas desde el Dashboard principal.' },
+                    { q: '¿Es gratuito?', a: 'DevSync es un proyecto open-source desarrollado durante un hackathon. Todas las funcionalidades están disponibles sin costo.' },
+                    { q: '¿Qué tecnologías usa DevSync?', a: 'El front-end usa React con Vite y TypeScript. El back-end usa Express.js con Prisma ORM y SQLite. Todo está containerizado con Docker Compose. Además integra APIs de OpenAI y Anthropic para las funciones de IA.' },
+                  ].map((faq, i) => {
+                    const idx = i;
+                    return (
+                      <div key={idx} className={`help-faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
+                        <button className="help-faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}>
+                          <span>{faq.q}</span>
+                          {openFaqIndex === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {openFaqIndex === idx && <div className="help-faq-answer">{faq.a}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Database Designer */}
+                <div className="help-faq-section">
+                  <h2 className="help-faq-section-title">
+                    <Database size={16} />
+                    Database Designer (Blueprint)
+                  </h2>
+                  {[
+                    { q: '¿Cómo creo una nueva tabla?', a: 'Haz clic en el botón "+ Add Table" en la barra lateral izquierda del Blueprint. Se creará una nueva tabla con una columna ID por defecto que puedes arrastrar y personalizar en el canvas.' },
+                    { q: '¿Cómo establezco relaciones entre tablas?', a: 'Para crear una relación (Foreign Key), haz clic en el ícono de link junto a una columna y arrástralo hasta la columna objetivo en otra tabla. La línea de relación aparecerá automáticamente en el canvas.' },
+                    { q: '¿Qué bases de datos puedo exportar?', a: 'Puedes exportar tu esquema a PostgreSQL, MySQL, SQLite, MongoDB (Mongoose schemas) y Prisma ORM. Cada exportación genera el script optimizado para ese motor específico.' },
+                    { q: '¿Puedo importar un esquema existente?', a: 'Sí, usa el editor de código en la vista Split del Blueprint. DevSync usa una sintaxis shorthand propia que puedes escribir o pegar para generar tablas automáticamente.' },
+                    { q: '¿Cómo agrego índices personalizados?', a: 'En el panel lateral derecho del Blueprint, ve a la pestaña "INDEXES". Ahí puedes seleccionar tabla y columna para crear índices personalizados que se incluirán en el script exportado.' },
+                  ].map((faq, i) => {
+                    const idx = 100 + i;
+                    return (
+                      <div key={idx} className={`help-faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
+                        <button className="help-faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}>
+                          <span>{faq.q}</span>
+                          {openFaqIndex === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {openFaqIndex === idx && <div className="help-faq-answer">{faq.a}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* StackAgent */}
+                <div className="help-faq-section">
+                  <h2 className="help-faq-section-title">
+                    <Users size={16} />
+                    StackAgent (Bandwidth)
+                  </h2>
+                  {[
+                    { q: '¿Qué es el StackAgent?', a: 'Es un asistente inteligente de distribución de tareas. Analiza la carga de trabajo de tu equipo y sugiere la mejor forma de asignar tareas para mantener un balance equitativo y prevenir el burnout.' },
+                    { q: '¿Cómo agrego miembros a mi equipo?', a: 'Desde el módulo Bandwidth puedes agregar miembros del equipo con su nombre y rol. Estos miembros se usarán para la distribución inteligente de tareas.' },
+                    { q: '¿Cómo funciona la distribución de tareas?', a: 'Ingresa las tareas pendientes y los miembros disponibles. La IA analiza la complejidad de cada tarea y la capacidad de cada miembro para sugerir la asignación más equilibrada posible.' },
+                  ].map((faq, i) => {
+                    const idx = 200 + i;
+                    return (
+                      <div key={idx} className={`help-faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
+                        <button className="help-faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}>
+                          <span>{faq.q}</span>
+                          {openFaqIndex === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {openFaqIndex === idx && <div className="help-faq-answer">{faq.a}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* DeepLint */}
+                <div className="help-faq-section">
+                  <h2 className="help-faq-section-title">
+                    <Sparkles size={16} />
+                    DeepLint
+                  </h2>
+                  {[
+                    { q: '¿Qué hace DeepLint?', a: 'DeepLint es una herramienta de análisis estático de código potenciada con inteligencia artificial. Detecta errores, malas prácticas, vulnerabilidades de seguridad y oportunidades de optimización en tu código.' },
+                    { q: '¿Qué lenguajes soporta?', a: 'DeepLint puede analizar código en TypeScript, JavaScript, Python, Java, C# y otros lenguajes populares. Puedes pegar código directamente o subir archivos para su análisis.' },
+                    { q: '¿Puedo aplicar las correcciones automáticamente?', a: 'DeepLint muestra sugerencias detalladas con el código corregido. Puedes copiar las correcciones sugeridas y aplicarlas en tu editor.' },
+                  ].map((faq, i) => {
+                    const idx = 300 + i;
+                    return (
+                      <div key={idx} className={`help-faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
+                        <button className="help-faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}>
+                          <span>{faq.q}</span>
+                          {openFaqIndex === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {openFaqIndex === idx && <div className="help-faq-answer">{faq.a}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* MergeGuard */}
+                <div className="help-faq-section">
+                  <h2 className="help-faq-section-title">
+                    <GitBranch size={16} />
+                    MergeGuard & BranchTree
+                  </h2>
+                  {[
+                    { q: '¿Qué es MergeGuard?', a: 'MergeGuard es un protector visual de merges que analiza las ramas de tu repositorio GitHub y te advierte sobre posibles conflictos antes de que ocurran. Incluye una visualización interactiva tipo árbol bioluminiscente.' },
+                    { q: '¿Cómo conecto mi repositorio de GitHub?', a: 'Necesitas configurar un GitHub Access Token en las variables de entorno del backend (GITHUB_ACCESS_TOKEN). Una vez configurado, puedes ingresar el nombre del repositorio en formato owner/repo.' },
+                    { q: '¿Qué diferencia hay entre MergeGuard y BranchTree?', a: 'MergeGuard se enfoca en detectar y prevenir conflictos de merge. BranchTree es un sincronizador visual que monitorea las ramas y te alerta si necesitas hacer pull de cambios recientes de la rama principal.' },
+                  ].map((faq, i) => {
+                    const idx = 400 + i;
+                    return (
+                      <div key={idx} className={`help-faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
+                        <button className="help-faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}>
+                          <span>{faq.q}</span>
+                          {openFaqIndex === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {openFaqIndex === idx && <div className="help-faq-answer">{faq.a}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Docify */}
+                <div className="help-faq-section">
+                  <h2 className="help-faq-section-title">
+                    <FileText size={16} />
+                    Docify (Generador de Documentación)
+                  </h2>
+                  {[
+                    { q: '¿Qué hace Docify?', a: 'Docify lee tu código fuente y genera automáticamente un archivo README.md bien estructurado. Explica el propósito de cada componente principal de tu proyecto con documentación clara y profesional.' },
+                    { q: '¿Qué necesito para generar documentación?', a: 'Solo necesitas tener archivos de código en tu proyecto. Docify escanea los archivos .ts, .tsx, .js, .jsx y .css, y usa IA para generar la documentación automáticamente.' },
+                    { q: '¿Puedo personalizar el output?', a: 'Sí, puedes editar el README generado directamente desde la interfaz antes de descargarlo o copiarlo.' },
+                  ].map((faq, i) => {
+                    const idx = 500 + i;
+                    return (
+                      <div key={idx} className={`help-faq-item ${openFaqIndex === idx ? 'open' : ''}`}>
+                        <button className="help-faq-question" onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}>
+                          <span>{faq.q}</span>
+                          {openFaqIndex === idx ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {openFaqIndex === idx && <div className="help-faq-answer">{faq.a}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+
+              </div>
+
+              <div className="help-faq-footer">
+                <p>¿No encontraste lo que buscabas?</p>
+                <button className="help-contact-btn" onClick={() => showNotification('Soporte contactado — te responderemos pronto')}>
+                  <MessageCircle size={14} />
+                  Contactar Soporte
+                </button>
+              </div>
+            </div>
           )}
         </main>
 
