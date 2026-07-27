@@ -54,7 +54,28 @@ router.post("/login", async (req, res) => {
 
     res.json({
       message: "Inicio de sesión correcto!",
-      user: { id: user.id, name: user.name, email: user.email }
+      user: { id: user.id, name: user.name, email: user.email, role: user.role, profileImage: user.profileImage }
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET user by name
+router.get("/user/:name", async (req, res) => {
+  try {
+    const user = await prisma.user.findFirst({
+      where: { name: req.params.name }
+    });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      profileImage: user.profileImage
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

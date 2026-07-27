@@ -96,3 +96,34 @@ model CodeReviewResult {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
+
+// StackAgent AI Boards Model
+model StackAgentBoard {
+  id        Int      @id @default(autoincrement())
+  name      String
+  boardData String   // JSON string containing the members and their tasks
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Docify Saved Documents Model
+model DocifyDocument {
+  id              Int      @id @default(autoincrement())
+  name            String
+  repoUrl         String
+  generatedReadme String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// DeepLint Saved Analysis Model
+model DeepLintSave {
+  id        Int      @id @default(autoincrement())
+  name      String
+  repoUrl   String
+  fileName  String
+  leftCode  String
+  rightCode String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
