@@ -111,7 +111,7 @@ const BioluminescentTree: React.FC<BioluminescentTreeProps> = ({ customBranchesD
     paths.push({ d: `M ${trunkX} ${trunkBottomY} Q ${trunkX} ${(trunkBottomY + trunkTopY) / 2} ${trunkX} ${trunkTopY}`, width: 28, opacity: 0.25, color: '#39ff14', branchName: 'main' });
     paths.push({ d: `M ${trunkX} ${trunkBottomY} Q ${trunkX} ${(trunkBottomY + trunkTopY) / 2} ${trunkX} ${trunkTopY}`, width: 8, opacity: 0.8, color: '#39ff14', branchName: 'main' }); // solid core
 
-    trunkPositions.forEach((pos, idx) => {
+    trunkPositions.forEach((pos, _idx) => {
       let d = `M ${pos.x} ${trunkBottomY}`;
       let currentX = pos.x;
       let currentY = trunkBottomY;

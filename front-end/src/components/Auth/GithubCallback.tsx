@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 interface GithubCallbackProps {
   setAuthScreen: (screen: any) => void
@@ -37,7 +37,7 @@ export default function GithubCallback({ setAuthScreen, showNotification }: Gith
 
         // 3. Intercambiar el código por un token en nuestro BACKEND
         // NOTA: Reemplazar con la URL real de tu backend
-        const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+        // const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
         
         // Simulando petición al backend por ahora para demostrar el flujo
         /*

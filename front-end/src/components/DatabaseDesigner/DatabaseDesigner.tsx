@@ -3,8 +3,6 @@ import {
   Database,
   Plus,
   Search,
-  Settings,
-  Share2,
   Download,
   Key,
   Link2,
@@ -30,7 +28,6 @@ import {
   Clock,
   LayoutGrid,
   Users,
-  Wand2,
   ChevronDown,
   ChevronUp,
   MessageCircle,
@@ -102,7 +99,7 @@ export default function DatabaseDesigner({
   const [teamMembers, setTeamMembers] = useState<StackAgentMember[]>(DEFAULT_STACKAGENT_MEMBERS)
 
   const [zoom, setZoom] = useState<number>(100)
-  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [searchQuery, _setSearchQuery] = useState<string>('')
   const [auditLogging, setAuditLogging] = useState<boolean>(true)
   const [copied, setCopied] = useState<boolean>(false)
   const [isPanning, setIsPanning] = useState<boolean>(false)

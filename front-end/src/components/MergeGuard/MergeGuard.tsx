@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Share2, Download, ChevronDown, GitBranch, Loader2, Sparkles, Network } from 'lucide-react';
+import { Share2, Download, ChevronDown, Loader2, Sparkles, Network } from 'lucide-react';
 import BioluminescentTree, { type BranchData } from './BioluminescentTree';
 import './MergeGuard.css';
 
