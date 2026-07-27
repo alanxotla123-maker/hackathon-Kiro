@@ -135,14 +135,33 @@ export default function DatabaseDesigner({
   const [isPropertiesCollapsed, setIsPropertiesCollapsed] = useState<boolean>(false)
 
   // Save system state
-  const [savedSchemas, setSavedSchemas] = useState<SavedSchema[]>(() => {
-    try {
-      const stored = localStorage.getItem('db_blueprint_saves')
-      return stored ? JSON.parse(stored) : []
-    } catch {
-      return []
+  const [savedSchemas, setSavedSchemas] = useState<SavedSchema[]>([])
+
+  useEffect(() => {
+    const fetchDesigns = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/api/db-designer/designs')
+        if (res.ok) {
+          const designs = await res.json()
+          const mappedSaves: SavedSchema[] = designs.map((d: any) => {
+            const parsedCanvas = JSON.parse(d.canvasData || '{}')
+            const savedTables = parsedCanvas.tables || []
+            return {
+              id: String(d.id),
+              name: d.name,
+              savedAt: d.updatedAt,
+              tables: savedTables,
+              tableCount: savedTables.length
+            }
+          })
+          setSavedSchemas(mappedSaves)
+        }
+      } catch (err) {
+        console.error('Failed to fetch designs', err)
+      }
     }
-  })
+    fetchDesigns()
+  }, [])
   const [showSavedPanel, setShowSavedPanel] = useState<boolean>(false)
   const [saveDialogOpen, setSaveDialogOpen] = useState<boolean>(false)
   const [saveDialogName, setSaveDialogName] = useState<string>('')
@@ -164,31 +183,58 @@ export default function DatabaseDesigner({
     setSaveDialogOpen(true)
   }
 
-  const handleConfirmSave = () => {
+  const handleConfirmSave = async () => {
     if (!saveDialogName.trim()) return
 
-    const newSave: SavedSchema = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-      name: saveDialogName,
-      savedAt: new Date().toISOString(),
-      tables: tables,
-      tableCount: tables.length
-    }
+    try {
+      const response = await fetch('http://localhost:3000/api/db-designer/designs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: saveDialogName,
+          canvasData: JSON.stringify({ tables }),
+          dbType: targetDb
+        })
+      })
 
-    const updatedSaves = [newSave, ...savedSchemas]
-    setSavedSchemas(updatedSaves)
-    localStorage.setItem('db_blueprint_saves', JSON.stringify(updatedSaves))
-    
-    setSaveDialogOpen(false)
-    setSaveDialogName('')
-    showNotification('Schema guardado exitosamente')
+      if (response.ok) {
+        const d = await response.json()
+        const newSave: SavedSchema = {
+          id: String(d.id),
+          name: d.name,
+          savedAt: d.updatedAt,
+          tables: tables,
+          tableCount: tables.length
+        }
+        setSavedSchemas([newSave, ...savedSchemas])
+        setSaveDialogOpen(false)
+        setSaveDialogName('')
+        showNotification('Schema guardado exitosamente en la base de datos')
+      } else {
+        showNotification('Error al guardar el schema')
+      }
+    } catch (err) {
+      console.error('Error saving schema', err)
+      showNotification('Error al contactar al servidor')
+    }
   }
 
-  const handleDeleteSave = (id: string) => {
-    const updatedSaves = savedSchemas.filter(s => s.id !== id)
-    setSavedSchemas(updatedSaves)
-    localStorage.setItem('db_blueprint_saves', JSON.stringify(updatedSaves))
-    showNotification('Guardado eliminado')
+  const handleDeleteSave = async (id: string) => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/db-designer/designs/${id}`, {
+        method: 'DELETE'
+      })
+      if (response.ok) {
+        const updatedSaves = savedSchemas.filter(s => s.id !== id)
+        setSavedSchemas(updatedSaves)
+        showNotification('Guardado eliminado de la base de datos')
+      } else {
+        showNotification('Error al eliminar guardado')
+      }
+    } catch (err) {
+      console.error('Error deleting schema', err)
+      showNotification('Error al contactar al servidor')
+    }
   }
 
   const handleLoadSchema = (save: SavedSchema) => {
@@ -1239,7 +1285,7 @@ export default function DatabaseDesigner({
         )}
 
         {/* Master Content Area switcher */}
-        <main className="master-content-body" style={(activeMasterTab === 'bandwidth' || activeMasterTab === 'docify') ? { overflow: 'visible' } : {}}>
+        <main className="master-content-body" style={(activeMasterTab === 'bandwidth' || activeMasterTab === 'docify') ? { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'visible' } : {}}>
           {activeMasterTab === 'home' && (
             <DashboardHome
               onNavigateToBlueprint={() => setActiveMasterTab('blueprint')}
@@ -1297,7 +1343,23 @@ export default function DatabaseDesigner({
                     <Code size={13} />
                     Split View
                   </button>
-                  {/* Save and Export buttons removed as per request */}
+                  <div style={{ width: '1px', height: '16px', background: '#334155', margin: '0 4px' }}></div>
+                  <button 
+                    className="btn-secondary" 
+                    onClick={() => setShowSavedPanel(!showSavedPanel)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <FolderOpen size={13} />
+                    Cargar
+                  </button>
+                  <button 
+                    className="btn-primary" 
+                    onClick={handleOpenSaveDialog}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px' }}
+                  >
+                    <Save size={13} />
+                    Guardar
+                  </button>
                 </div>
               </div>
 

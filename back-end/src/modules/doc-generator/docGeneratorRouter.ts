@@ -286,4 +286,45 @@ router.get("/jobs/:projectId", async (req, res) => {
   }
 });
 
+// GET all Docify documents
+router.get("/docs", async (req, res) => {
+  try {
+    const docs = await prisma.docifyDocument.findMany({
+      orderBy: { updatedAt: "desc" }
+    });
+    res.json(docs);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST new Docify document
+router.post("/docs", async (req, res) => {
+  const { name, repoUrl, generatedReadme } = req.body;
+  try {
+    const doc = await prisma.docifyDocument.create({
+      data: {
+        name,
+        repoUrl,
+        generatedReadme
+      }
+    });
+    res.status(201).json(doc);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE Docify document
+router.delete("/docs/:id", async (req, res) => {
+  try {
+    await prisma.docifyDocument.delete({
+      where: { id: parseInt(req.params.id) }
+    });
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
