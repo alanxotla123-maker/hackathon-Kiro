@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Loader2, Download, GitBranch, Link2, Activity, Check, Settings } from 'lucide-react';
+import { FileText, Loader2, Download, GitBranch, Link2, Activity, Check, Settings, ArrowLeft } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import ReactMarkdown from 'react-markdown';
 import type { Table } from './types';
@@ -7,9 +7,10 @@ import type { Table } from './types';
 interface DocifyViewProps {
   tables: Table[];
   showNotification: (msg: string) => void;
+  onBack?: () => void;
 }
 
-export const DocifyView: React.FC<DocifyViewProps> = ({ tables, showNotification }) => {
+export const DocifyView: React.FC<DocifyViewProps> = ({ tables, showNotification, onBack }) => {
   const [docifyRepoUrl, setDocifyRepoUrl] = useState<string>('https://github.com/usuario/repo-name');
   const [docifyStatus, setDocifyStatus] = useState<'idle' | 'cloning' | 'filtering' | 'generating' | 'converting' | 'ready'>('idle');
   const [docifyLoadingStep, setDocifyLoadingStep] = useState<number>(0);
@@ -262,75 +263,19 @@ Fecha de generación: ${new Date().toLocaleDateString()}
   };
 
   return (
-    <div className="docify-workspace-container" style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '24px', gap: '20px', height: 'calc(100vh - 80px)', overflow: 'hidden', background: '#0a0f1d', color: '#e2e8f0', boxSizing: 'border-box' }}>
+    <div className="docify-workspace-container" style={{ display: 'flex', flexDirection: 'row', flex: 1, height: '100%', boxSizing: 'border-box' }}>
       
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        background: 'rgba(30, 41, 59, 0.4)',
-        border: '1px solid #1e293b',
-        borderRadius: '8px',
-        padding: '8px 16px',
-        width: '100%',
-        boxSizing: 'border-box'
-      }}>
-        <Link2 size={16} style={{ color: '#64748b' }} />
-        <input
-          type="text"
-          value={docifyRepoUrl}
-          onChange={(e) => setDocifyRepoUrl(e.target.value)}
-          placeholder="https://github.com/usuario/repo-name"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: '#f8fafc',
-            flex: 1,
-            fontSize: '13px',
-            outline: 'none'
-          }}
-        />
-        <button
-          onClick={startDocifyAnalysis}
-          disabled={docifyStatus !== 'idle' && docifyStatus !== 'ready'}
-          style={{
-            background: (docifyStatus !== 'idle' && docifyStatus !== 'ready') ? '#1e293b' : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '8px 24px',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: (docifyStatus !== 'idle' && docifyStatus !== 'ready') ? 'not-allowed' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.2s ease',
-            boxShadow: (docifyStatus !== 'idle' && docifyStatus !== 'ready') ? 'none' : '0 4px 12px rgba(59, 130, 246, 0.25)'
-          }}
-        >
-          {docifyStatus !== 'idle' && docifyStatus !== 'ready' ? (
-            <Loader2 size={13} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
-          ) : (
-            <Activity size={13} />
-          )}
-          Analyze
-        </button>
-      </div>
+      {/* Left Sidebar */}
+      <aside className="stackagent-sidebar">
+        <div className="master-sidebar-logo-group" style={{ cursor: 'pointer', borderBottom: '1px solid #131924' }} onClick={onBack}>
+          <ArrowLeft size={16} style={{ color: '#94a3b8', marginRight: '8px' }} />
+          <div className="master-logo-text-group">
+            <span className="master-logo-text" style={{ fontSize: '13px' }}>Docify</span>
+            <span className="master-logo-sub">doc-generator</span>
+          </div>
+        </div>
 
-      <div style={{ display: 'flex', gap: '20px', flex: 1, overflow: 'hidden' }}>
-        
-        <div style={{
-          width: '320px',
-          background: 'rgba(15, 23, 42, 0.4)',
-          border: '1px solid #1e293b',
-          borderRadius: '12px',
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '24px',
-          boxSizing: 'border-box'
-        }}>
+        <div style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '24px', overflowY: 'auto', flex: 1 }}>
           <div>
             <h3 style={{
               fontSize: '11px',
@@ -498,7 +443,64 @@ Fecha de generación: ${new Date().toLocaleDateString()}
               Infrastructure v2.4 running with signature extraction enabled.
             </p>
           </div>
+        </div>
+      </aside>
 
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '24px', gap: '20px', overflow: 'hidden', boxSizing: 'border-box' }}>
+        
+        {/* Top Header */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          background: 'rgba(30, 41, 59, 0.4)',
+          border: '1px solid #1e293b',
+          borderRadius: '8px',
+          padding: '8px 16px',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          <Link2 size={16} style={{ color: '#64748b' }} />
+          <input
+            type="text"
+            value={docifyRepoUrl}
+            onChange={(e) => setDocifyRepoUrl(e.target.value)}
+            placeholder="https://github.com/usuario/repo-name"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#f8fafc',
+              flex: 1,
+              fontSize: '13px',
+              outline: 'none'
+            }}
+          />
+          <button
+            onClick={startDocifyAnalysis}
+            disabled={docifyStatus !== 'idle' && docifyStatus !== 'ready'}
+            style={{
+              background: (docifyStatus !== 'idle' && docifyStatus !== 'ready') ? '#1e293b' : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '8px 24px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: (docifyStatus !== 'idle' && docifyStatus !== 'ready') ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease',
+              boxShadow: (docifyStatus !== 'idle' && docifyStatus !== 'ready') ? 'none' : '0 4px 12px rgba(59, 130, 246, 0.25)'
+            }}
+          >
+            {docifyStatus !== 'idle' && docifyStatus !== 'ready' ? (
+              <Loader2 size={13} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
+            ) : (
+              <Activity size={13} />
+            )}
+            Analyze
+          </button>
         </div>
 
         <div style={{
