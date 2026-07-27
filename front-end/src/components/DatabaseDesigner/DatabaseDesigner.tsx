@@ -24,7 +24,6 @@ import {
   Home,
   GitBranch,
   Sparkles,
-  Bell,
   ArrowLeft,
   Save,
   FolderOpen,
@@ -41,14 +40,14 @@ import type { Table, Column, DatabaseDesignerProps, SavedSchema } from './types'
 import { DocifyView } from './DocifyView';
 import { highlightShorthand, serializeTablesToShorthand } from './utils';
 import MergeGuard from '../MergeGuard/MergeGuard';
-import StackAgent from '../StackAgent/StackAgent';
+import StackAgent, { type Member as StackAgentMember, DEFAULT_STACKAGENT_MEMBERS } from '../StackAgent/StackAgent';
 
 const formatSavedDate = (dateStr: string) => {
   try {
     const d = new Date(dateStr);
-    return d.toLocaleString(undefined, { 
-      year: 'numeric', month: 'short', day: 'numeric', 
-      hour: '2-digit', minute: '2-digit' 
+    return d.toLocaleString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     });
   } catch (e) {
     return dateStr;
@@ -93,6 +92,9 @@ export default function DatabaseDesigner({
   const [activeMasterTab, setActiveMasterTab] = useState<'home' | 'blueprint' | 'bandwidth' | 'mergeguard' | 'docify' | 'deeplint' | 'profile'>('home')
   const [selectedTableId, setSelectedTableId] = useState<string | null>('orders')
   const [selectedRelationId, setSelectedRelationId] = useState<string | null>(null)
+
+  // StackAgent team members (lifted so Home's Team Bandwidth widget reflects the live team)
+  const [teamMembers, setTeamMembers] = useState<StackAgentMember[]>(DEFAULT_STACKAGENT_MEMBERS)
 
   const [zoom, setZoom] = useState<number>(100)
   const [searchQuery, setSearchQuery] = useState<string>('')
@@ -1256,11 +1258,6 @@ export default function DatabaseDesigner({
             </div>
 
             <div className="master-header-right">
-              <button className="icon-btn notification-bell" onClick={() => showNotification('No hay nuevas notificaciones')} title="Notifications">
-                <Bell size={16} />
-                <span className="bell-badge"></span>
-              </button>
-
               <div className="master-user-profile" title="Ver Perfil" onClick={() => {
                 setActiveMasterTab('profile');
               }}>
@@ -1283,7 +1280,11 @@ export default function DatabaseDesigner({
           {activeMasterTab === 'home' && (
             <DashboardHome
               onNavigateToBlueprint={() => setActiveMasterTab('blueprint')}
+              onNavigateToDocify={() => setActiveMasterTab('docify')}
+              onNavigateToDeepLint={() => setAuthScreen('deeplint')}
               userName={loggedInUserName}
+              tables={tables}
+              teamMembers={teamMembers}
             />
           )}
 
@@ -1338,16 +1339,16 @@ export default function DatabaseDesigner({
                     Split View
                   </button>
                   <div style={{ width: '1px', height: '16px', background: '#334155', margin: '0 4px' }}></div>
-                  <button 
-                    className="btn-secondary" 
+                  <button
+                    className="btn-secondary"
                     onClick={() => setShowSavedPanel(!showSavedPanel)}
                     style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <FolderOpen size={13} />
                     Cargar
                   </button>
-                  <button 
-                    className="btn-primary" 
+                  <button
+                    className="btn-primary"
                     onClick={handleOpenSaveDialog}
                     style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px' }}
                   >
@@ -1832,256 +1833,256 @@ export default function DatabaseDesigner({
                     {/* Right side Properties Panel */}
                     <aside className={`right-panel ${isPropertiesCollapsed ? 'collapsed' : ''}`}>
                       <div
-                          className="properties-toggle-btn"
-                          onClick={() => setIsPropertiesCollapsed(!isPropertiesCollapsed)}
-                          title={isPropertiesCollapsed ? 'Expandir Propiedades' : 'Colapsar Propiedades'}
-                        >
-                          {isPropertiesCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
-                        </div>
-                        {selectedTable ? (
-                          <>
-                            <div className="panel-header">
-                              <h2>Table Properties</h2>
-                              <button className="icon-btn" onClick={() => setSelectedTableId(null)}>
-                                <X size={15} />
-                              </button>
+                        className="properties-toggle-btn"
+                        onClick={() => setIsPropertiesCollapsed(!isPropertiesCollapsed)}
+                        title={isPropertiesCollapsed ? 'Expandir Propiedades' : 'Colapsar Propiedades'}
+                      >
+                        {isPropertiesCollapsed ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
+                      </div>
+                      {selectedTable ? (
+                        <>
+                          <div className="panel-header">
+                            <h2>Table Properties</h2>
+                            <button className="icon-btn" onClick={() => setSelectedTableId(null)}>
+                              <X size={15} />
+                            </button>
+                          </div>
+
+                          <div className="panel-body">
+                            <div className="form-group">
+                              <label className="form-label">Table Name</label>
+                              <input
+                                type="text"
+                                className="form-input"
+                                value={selectedTable.name}
+                                onChange={(e) => handleUpdateTableMeta({ name: e.target.value })}
+                              />
                             </div>
 
-                            <div className="panel-body">
-                              <div className="form-group">
-                                <label className="form-label">Table Name</label>
-                                <input
-                                  type="text"
-                                  className="form-input"
-                                  value={selectedTable.name}
-                                  onChange={(e) => handleUpdateTableMeta({ name: e.target.value })}
-                                />
+                            <div className="form-group">
+                              <label className="form-label">Table Comment</label>
+                              <textarea
+                                className="form-textarea"
+                                value={selectedTable.comment}
+                                onChange={(e) => handleUpdateTableMeta({ comment: e.target.value })}
+                              />
+                            </div>
+
+                            <div className="form-group">
+                              <div className="section-title-row">
+                                <label className="form-label">Columns ({selectedTable.columns.length})</label>
+                                <button className="btn-link-add" onClick={handleAddColumn}>
+                                  <Plus size={11} />
+                                  Add
+                                </button>
                               </div>
 
-                              <div className="form-group">
-                                <label className="form-label">Table Comment</label>
-                                <textarea
-                                  className="form-textarea"
-                                  value={selectedTable.comment}
-                                  onChange={(e) => handleUpdateTableMeta({ comment: e.target.value })}
-                                />
-                              </div>
+                              <div className="columns-edit-list">
+                                {selectedTable.columns.map((col) => (
+                                  <div key={col.id} className="column-edit-item">
+                                    <div className="column-edit-main">
+                                      <input
+                                        type="text"
+                                        className="form-input"
+                                        style={{ padding: '4px 8px', fontSize: '12px' }}
+                                        value={col.name}
+                                        onChange={(e) => handleUpdateColumn(col.id, { name: e.target.value })}
+                                      />
+                                      <select
+                                        className="form-select"
+                                        value={col.type}
+                                        onChange={(e) => handleUpdateColumn(col.id, { type: e.target.value })}
+                                      >
+                                        {columnTypes.map((t) => (
+                                          <option key={t} value={t}>
+                                            {t}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <button
+                                        className="column-edit-delete"
+                                        onClick={() => handleDeleteColumn(col.id)}
+                                        title="Delete Column"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
 
-                              <div className="form-group">
-                                <div className="section-title-row">
-                                  <label className="form-label">Columns ({selectedTable.columns.length})</label>
-                                  <button className="btn-link-add" onClick={handleAddColumn}>
-                                    <Plus size={11} />
-                                    Add
-                                  </button>
-                                </div>
-
-                                <div className="columns-edit-list">
-                                  {selectedTable.columns.map((col) => (
-                                    <div key={col.id} className="column-edit-item">
-                                      <div className="column-edit-main">
+                                    <div className="column-edit-checkboxes">
+                                      <label className="checkbox-label">
                                         <input
-                                          type="text"
-                                          className="form-input"
-                                          style={{ padding: '4px 8px', fontSize: '12px' }}
-                                          value={col.name}
-                                          onChange={(e) => handleUpdateColumn(col.id, { name: e.target.value })}
+                                          type="checkbox"
+                                          checked={col.isPrimaryKey}
+                                          onChange={(e) =>
+                                            handleUpdateColumn(col.id, {
+                                              isPrimaryKey: e.target.checked,
+                                              isForeignKey: e.target.checked ? false : col.isForeignKey
+                                            })
+                                          }
                                         />
+                                        PK
+                                      </label>
+
+                                      <label className="checkbox-label">
+                                        <input
+                                          type="checkbox"
+                                          checked={col.isForeignKey}
+                                          onChange={(e) =>
+                                            handleUpdateColumn(col.id, {
+                                              isForeignKey: e.target.checked,
+                                              isPrimaryKey: e.target.checked ? false : col.isPrimaryKey,
+                                              foreignKeyTargetTableId: e.target.checked
+                                                ? tables.find((t) => t.id !== selectedTable.id)?.id || ''
+                                                : undefined,
+                                              foreignKeyTargetColumnId: e.target.checked
+                                                ? tables.find((t) => t.id !== selectedTable.id)?.columns[0]?.id || ''
+                                                : undefined
+                                            })
+                                          }
+                                        />
+                                        FK
+                                      </label>
+
+                                      {col.isForeignKey && (
                                         <select
                                           className="form-select"
-                                          value={col.type}
-                                          onChange={(e) => handleUpdateColumn(col.id, { type: e.target.value })}
+                                          style={{ padding: '2px 4px', fontSize: '10px' }}
+                                          value={col.foreignKeyTargetTableId}
+                                          onChange={(e) => {
+                                            const targetTabId = e.target.value
+                                            const targetTableObj = tables.find((t) => t.id === targetTabId)
+                                            handleUpdateColumn(col.id, {
+                                              foreignKeyTargetTableId: targetTabId,
+                                              foreignKeyTargetColumnId: targetTableObj?.columns[0]?.id || ''
+                                            })
+                                          }}
                                         >
-                                          {columnTypes.map((t) => (
-                                            <option key={t} value={t}>
-                                              {t}
-                                            </option>
-                                          ))}
+                                          {tables
+                                            .filter((t) => t.id !== selectedTable.id)
+                                            .map((t) => (
+                                              <option key={t.id} value={t.id}>
+                                                {t.name}
+                                              </option>
+                                            ))}
                                         </select>
-                                        <button
-                                          className="column-edit-delete"
-                                          onClick={() => handleDeleteColumn(col.id)}
-                                          title="Delete Column"
-                                        >
-                                          <Trash2 size={12} />
-                                        </button>
-                                      </div>
-
-                                      <div className="column-edit-checkboxes">
-                                        <label className="checkbox-label">
-                                          <input
-                                            type="checkbox"
-                                            checked={col.isPrimaryKey}
-                                            onChange={(e) =>
-                                              handleUpdateColumn(col.id, {
-                                                isPrimaryKey: e.target.checked,
-                                                isForeignKey: e.target.checked ? false : col.isForeignKey
-                                              })
-                                            }
-                                          />
-                                          PK
-                                        </label>
-
-                                        <label className="checkbox-label">
-                                          <input
-                                            type="checkbox"
-                                            checked={col.isForeignKey}
-                                            onChange={(e) =>
-                                              handleUpdateColumn(col.id, {
-                                                isForeignKey: e.target.checked,
-                                                isPrimaryKey: e.target.checked ? false : col.isPrimaryKey,
-                                                foreignKeyTargetTableId: e.target.checked
-                                                  ? tables.find((t) => t.id !== selectedTable.id)?.id || ''
-                                                  : undefined,
-                                                foreignKeyTargetColumnId: e.target.checked
-                                                  ? tables.find((t) => t.id !== selectedTable.id)?.columns[0]?.id || ''
-                                                  : undefined
-                                              })
-                                            }
-                                          />
-                                          FK
-                                        </label>
-
-                                        {col.isForeignKey && (
-                                          <select
-                                            className="form-select"
-                                            style={{ padding: '2px 4px', fontSize: '10px' }}
-                                            value={col.foreignKeyTargetTableId}
-                                            onChange={(e) => {
-                                              const targetTabId = e.target.value
-                                              const targetTableObj = tables.find((t) => t.id === targetTabId)
-                                              handleUpdateColumn(col.id, {
-                                                foreignKeyTargetTableId: targetTabId,
-                                                foreignKeyTargetColumnId: targetTableObj?.columns[0]?.id || ''
-                                              })
-                                            }}
-                                          >
-                                            {tables
-                                              .filter((t) => t.id !== selectedTable.id)
-                                              .map((t) => (
-                                                <option key={t.id} value={t.id}>
-                                                  {t.name}
-                                                </option>
-                                              ))}
-                                          </select>
-                                        )}
-                                      </div>
+                                      )}
                                     </div>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <div className="form-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-                                <label className="form-label">Engine Settings</label>
-                                <div className="toggle-row">
-                                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Audit Logging</span>
-                                  <label className="switch">
-                                    <input
-                                      type="checkbox"
-                                      checked={auditLogging}
-                                      onChange={(e) => setAuditLogging(e.target.checked)}
-                                    />
-                                    <span className="slider" />
-                                  </label>
-                                </div>
-                              </div>
-
-                              <div className="sql-preview-container">
-                                <div className="sql-header">
-                                  <span className="form-label">SQL Preview</span>
-                                  <button
-                                    className="icon-btn"
-                                    onClick={() => copyToClipboard(generateSQL(selectedTable))}
-                                    title="Copy SQL"
-                                  >
-                                    {copied ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
-                                  </button>
-                                </div>
-                                <pre className="sql-box">
-                                  <span className="sql-keyword">CREATE TABLE</span> <span className="sql-string">"{selectedTable.name}"</span> ({"\n"}
-                                  {selectedTable.columns.map((c, idx) => {
-                                    let typeStr = c.type
-                                    if (c.type === 'String') typeStr = 'UUID'
-                                    if (c.type === 'Decimal') typeStr = 'DECIMAL(10,2)'
-                                    const isLast = idx === selectedTable.columns.length - 1
-                                    return (
-                                      <span key={c.id}>
-                                        {"  "}<span className="sql-string">"{c.name}"</span> <span className="sql-type">{typeStr.toUpperCase()}</span>
-                                        {c.isPrimaryKey && <span className="sql-keyword"> PRIMARY KEY</span>}
-                                        {!isLast && ","}{"\n"}
-                                      </span>
-                                    )
-                                  })}
-                                  );
-                                </pre>
+                                  </div>
+                                ))}
                               </div>
                             </div>
-                          </>
-                        ) : (
-                          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                            <h3>No Table Selected</h3>
-                            <p style={{ fontSize: '12px' }}>Click a table in the canvas to inspect its properties.</p>
-                          </div>
-                        )}
-                      </aside>
-                    </>
-                )}
-                  </div>
 
+                            <div className="form-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                              <label className="form-label">Engine Settings</label>
+                              <div className="toggle-row">
+                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Audit Logging</span>
+                                <label className="switch">
+                                  <input
+                                    type="checkbox"
+                                    checked={auditLogging}
+                                    onChange={(e) => setAuditLogging(e.target.checked)}
+                                  />
+                                  <span className="slider" />
+                                </label>
+                              </div>
+                            </div>
+
+                            <div className="sql-preview-container">
+                              <div className="sql-header">
+                                <span className="form-label">SQL Preview</span>
+                                <button
+                                  className="icon-btn"
+                                  onClick={() => copyToClipboard(generateSQL(selectedTable))}
+                                  title="Copy SQL"
+                                >
+                                  {copied ? <Check size={13} style={{ color: '#10b981' }} /> : <Copy size={13} />}
+                                </button>
+                              </div>
+                              <pre className="sql-box">
+                                <span className="sql-keyword">CREATE TABLE</span> <span className="sql-string">"{selectedTable.name}"</span> ({"\n"}
+                                {selectedTable.columns.map((c, idx) => {
+                                  let typeStr = c.type
+                                  if (c.type === 'String') typeStr = 'UUID'
+                                  if (c.type === 'Decimal') typeStr = 'DECIMAL(10,2)'
+                                  const isLast = idx === selectedTable.columns.length - 1
+                                  return (
+                                    <span key={c.id}>
+                                      {"  "}<span className="sql-string">"{c.name}"</span> <span className="sql-type">{typeStr.toUpperCase()}</span>
+                                      {c.isPrimaryKey && <span className="sql-keyword"> PRIMARY KEY</span>}
+                                      {!isLast && ","}{"\n"}
+                                    </span>
+                                  )
+                                })}
+                                );
+                              </pre>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          <h3>No Table Selected</h3>
+                          <p style={{ fontSize: '12px' }}>Click a table in the canvas to inspect its properties.</p>
+                        </div>
+                      )}
+                    </aside>
+                  </>
+                )}
               </div>
+
+            </div>
           )}
 
-              {activeMasterTab !== 'home' && activeMasterTab !== 'blueprint' && activeMasterTab !== 'profile' && activeMasterTab !== 'docify' && activeMasterTab !== 'mergeguard' && activeMasterTab !== 'bandwidth' && (
-                <div className="placeholder-tab-content" style={{ padding: '40px', color: 'var(--text-muted)', textAlign: 'center' }}>
-                  <h2>{activeMasterTab.toUpperCase()} Module</h2>
-                  <p style={{ fontSize: '14px', marginTop: '8px' }}>This component is fully active and synchronized with production environment.</p>
-                </div>
-              )}
+          {activeMasterTab !== 'home' && activeMasterTab !== 'blueprint' && activeMasterTab !== 'profile' && activeMasterTab !== 'docify' && activeMasterTab !== 'mergeguard' && activeMasterTab !== 'bandwidth' && (
+            <div className="placeholder-tab-content" style={{ padding: '40px', color: 'var(--text-muted)', textAlign: 'center' }}>
+              <h2>{activeMasterTab.toUpperCase()} Module</h2>
+              <p style={{ fontSize: '14px', marginTop: '8px' }}>This component is fully active and synchronized with production environment.</p>
+            </div>
+          )}
 
-              {activeMasterTab === 'bandwidth' && (
-                <StackAgent onBack={() => setActiveMasterTab('home')} />
-              )}
+          {activeMasterTab === 'bandwidth' && (
+            <StackAgent onBack={() => setActiveMasterTab('home')} members={teamMembers} setMembers={setTeamMembers} />
+          )}
 
-              {activeMasterTab === 'mergeguard' && (
-                <MergeGuard />
-              )}
+          {activeMasterTab === 'mergeguard' && (
+            <MergeGuard />
+          )}
 
-              {activeMasterTab === 'docify' && (
-                <DocifyView
-                  tables={tables}
-                  showNotification={showNotification}
-                  onBack={() => setActiveMasterTab('home')}
-                />
-              )}
+          {activeMasterTab === 'docify' && (
+            <DocifyView
+              tables={tables}
+              showNotification={showNotification}
+              onBack={() => setActiveMasterTab('home')}
+            />
+          )}
 
-              {activeMasterTab === 'profile' && (
-                <UserProfileView
-                  userName={loggedInUserName}
-                  setAuthScreen={setAuthScreen}
-                  showNotification={showNotification}
-                />
-              )}
-            </main>
+          {activeMasterTab === 'profile' && (
+            <UserProfileView
+              userName={loggedInUserName}
+              setAuthScreen={setAuthScreen}
+              showNotification={showNotification}
+            />
+          )}
+        </main>
 
         {/* Master Bottom Status Bar */}
-          <footer className="master-bottom-status-bar">
-            <div className="status-left">
-              <span className="status-indicator">
-                <span className="status-dot green"></span>
-                Gateway: Connected
-              </span>
-              <span className="status-separator">•</span>
-              <span className="status-branch" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <GitBranch size={11} />
-                main @ 7f2a1b9
-              </span>
-            </div>
-            <div className="status-right">
-              <span>UTC: {new Date().toISOString().slice(11, 19)}</span>
-              <span className="status-separator">•</span>
-              <span>Node: v18.12.1</span>
-            </div>
-          </footer>
+        <footer className="master-bottom-status-bar">
+          <div className="status-left">
+            <span className="status-indicator">
+              <span className="status-dot green"></span>
+              Gateway: Connected
+            </span>
+            <span className="status-separator">•</span>
+            <span className="status-branch" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <GitBranch size={11} />
+              main @ 7f2a1b9
+            </span>
+          </div>
+          <div className="status-right">
+            <span>UTC: {new Date().toISOString().slice(11, 19)}</span>
+            <span className="status-separator">•</span>
+            <span>Node: v18.12.1</span>
+          </div>
+        </footer>
       </div>
     </div>
   )
