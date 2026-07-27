@@ -7,10 +7,14 @@ import DatabaseDesigner from './components/DatabaseDesigner/DatabaseDesigner'
 import DeepLint from './components/DeepLint/DeepLint'
 import AIPoc from './components/AIPoc/AIPoc'
 import BranchTree from './components/BranchTree/BranchTree'
+import GithubCallback from './components/Auth/GithubCallback'
 import './App.css'
 
 export default function App() {
-  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree'>(() => {
+  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree' | 'github_callback'>(() => {
+    if (window.location.pathname === '/api/auth/github/callback') {
+      return 'github_callback'
+    }
     const saved = localStorage.getItem('authSession')
     return saved === 'active' ? 'workspace' : 'login'
   })
@@ -19,7 +23,7 @@ export default function App() {
   const [registerConflict, setRegisterConflict] = useState<boolean>(false)
   const [notification, setNotification] = useState<string | null>(null)
 
-  const handleSetAuthScreen = (screen: 'login' | 'register' | 'forgot' | 'success' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree') => {
+  const handleSetAuthScreen = (screen: 'login' | 'register' | 'forgot' | 'success' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree' | 'github_callback') => {
     setAuthScreen(screen)
     if (screen === 'workspace' || screen === 'branchtree') {
       localStorage.setItem('authSession', 'active')
@@ -63,6 +67,13 @@ export default function App() {
           setAuthInputs={setAuthInputs}
           authMessage={authMessage}
           setAuthMessage={setAuthMessage}
+          setAuthScreen={handleSetAuthScreen}
+          showNotification={showNotification}
+        />
+      )}
+
+      {authScreen === 'github_callback' && (
+        <GithubCallback
           setAuthScreen={handleSetAuthScreen}
           showNotification={showNotification}
         />
