@@ -426,7 +426,7 @@ const BioluminescentTree: React.FC<BioluminescentTreeProps> = ({ customBranchesD
       </svg>
 
       {/* Controls Overlay */}
-      <div style={{ position: 'absolute', bottom: '40px', right: '40px', display: 'flex', flexDirection: 'column', gap: '16px', pointerEvents: 'auto', zIndex: 10 }}>
+      <div style={{ position: 'absolute', top: '120px', left: '40px', display: 'flex', flexDirection: 'column', gap: '16px', pointerEvents: 'auto', zIndex: 10 }}>
         <div style={{ background: 'rgba(10, 15, 26, 0.4)', backdropFilter: 'blur(12px)', border: '1px solid rgba(57, 255, 20, 0.3)', borderRadius: '12px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <button onClick={() => setTransform(p => ({ ...p, scale: Math.min(4, p.scale + 0.2) }))} style={{ background: 'transparent', border: 'none', color: '#39ff14', padding: '12px', cursor: 'pointer' }}><ZoomIn size={16} /></button>
           <div style={{ height: '1px', background: 'rgba(57, 255, 20, 0.3)', width: '100%' }}></div>

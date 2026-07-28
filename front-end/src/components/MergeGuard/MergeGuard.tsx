@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Share2, Download, ChevronDown, Loader2, Sparkles, Network } from 'lucide-react';
+import { Share2, Download, ChevronDown, Loader2 } from 'lucide-react';
 import BioluminescentTree, { type BranchData } from './BioluminescentTree';
 import './MergeGuard.css';
 
@@ -140,10 +140,6 @@ const MergeGuard: React.FC = () => {
           <div className="mg-title-group">
             <h1>Bandwidth - Bio-Digital Evolution</h1>
             <p>Real-time repository architecture and branch lifecycle visualization.</p>
-          </div>
-          <div className="mg-toolbar">
-            <button className="pill-btn active"><Network size={14} /> Bioluminescent Neural Map</button>
-            <button className="pill-btn"><Sparkles size={14} /> Interact with glowing nodes</button>
           </div>
         </div>
 

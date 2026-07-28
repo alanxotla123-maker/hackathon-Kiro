@@ -8,12 +8,16 @@ import DeepLint from './components/DeepLint/DeepLint'
 import AIPoc from './components/AIPoc/AIPoc'
 import BranchTree from './components/BranchTree/BranchTree'
 import GithubCallback from './components/Auth/GithubCallback'
+import GoogleCallback from './components/Auth/GoogleCallback'
 import './App.css'
 
 export default function App() {
-  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'loginSuccess' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree' | 'github_callback'>(() => {
+  const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'loginSuccess' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree' | 'github_callback' | 'google_callback'>(() => {
     if (window.location.pathname === '/api/auth/github/callback') {
       return 'github_callback'
+    }
+    if (window.location.pathname === '/api/auth/google/callback') {
+      return 'google_callback'
     }
     const saved = localStorage.getItem('authSession')
     return saved === 'active' ? 'workspace' : 'login'
@@ -62,6 +66,13 @@ export default function App() {
 
       {authScreen === 'github_callback' && (
         <GithubCallback
+          setAuthScreen={handleSetAuthScreen}
+          showNotification={showNotification}
+        />
+      )}
+
+      {authScreen === 'google_callback' && (
+        <GoogleCallback
           setAuthScreen={handleSetAuthScreen}
           showNotification={showNotification}
         />

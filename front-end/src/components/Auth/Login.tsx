@@ -129,7 +129,7 @@ export default function Login({
           </button>
 
           <button
-            className="w-full bg-white text-gray-700 font-medium py-[10px] px-4 rounded-md border border-gray-300 shadow-sm hover:bg-gray-50 hover:shadow-md transition-all duration-200 flex items-center justify-center"
+            className="btn-google-auth-dark w-full"
             onClick={handleGoogleLogin}
           >
             <svg viewBox="0 0 48 48" width="18" height="18" style={{ marginRight: 8 }}>

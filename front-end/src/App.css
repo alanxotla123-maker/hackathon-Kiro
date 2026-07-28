@@ -2027,6 +2027,29 @@ input:checked + .slider:before {
   border-color: #3b82f6;
 }
 
+.btn-google-auth-dark {
+  width: 100%;
+  background-color: #141d2e;
+  border: 1px solid #253550;
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 11px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-google-auth-dark:hover {
+  background-color: #1e2d45;
+  border-color: #4285F4;
+}
+
+
 .auth-label-normal {
   font-size: 13px;
   font-weight: 500;
