@@ -383,3 +383,41 @@
   border-color: rgba(100, 116, 139, 0.3);
 }
 
+/* Mini action button for saving */
+.action-button-mini {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fbbf24;
+  padding: 10px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  height: 38px;
+  width: 38px;
+}
+
+.action-button-mini:hover {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: #fbbf24;
+  transform: translateY(-1px);
+}
+
+.action-button-mini:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #64748b;
+}
+
+/* Saved repo item hover effect */
+.saved-repo-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(57, 255, 20, 0.3) !important;
+  transform: translateX(2px);
+}
+
+

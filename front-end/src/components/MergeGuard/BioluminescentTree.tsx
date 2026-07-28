@@ -318,6 +318,7 @@ const BioluminescentTree: React.FC<BioluminescentTreeProps> = ({ customBranchesD
       `}</style>
 
       <svg
+        id="bioluminescent-tree-svg"
         width="100%" height="100%"
         viewBox="0 0 1000 950"
         preserveAspectRatio="xMidYMid meet"

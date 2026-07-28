@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Share2, Download, ChevronDown, Loader2 } from 'lucide-react';
+import { Download, ChevronDown, Loader2, Star, Trash2 } from 'lucide-react';
 import BioluminescentTree, { type BranchData } from './BioluminescentTree';
 import './MergeGuard.css';
 
@@ -16,6 +16,12 @@ const MergeGuard: React.FC = () => {
   const [repoStats, setRepoStats] = useState({ branches: 8, conflicts: 2, health: 99.4 });
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [activeBranchNames, setActiveBranchNames] = useState<string[]>([]);
+  
+  // Saved repositories list from localStorage
+  const [savedRepos, setSavedRepos] = useState<string[]>(() => {
+    const saved = localStorage.getItem('mergeguard_saved_repos');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   /** Extract "owner/repo" from various URL formats */
   const extractRepoPath = (input: string): string => {
@@ -26,11 +32,58 @@ const MergeGuard: React.FC = () => {
     return cleaned;
   };
 
-  const analyzeRepo = async () => {
+  const saveCurrentRepo = () => {
     if (!repoUrl) return;
+    const path = extractRepoPath(repoUrl);
+    if (!savedRepos.includes(path)) {
+      const updated = [...savedRepos, path];
+      setSavedRepos(updated);
+      localStorage.setItem('mergeguard_saved_repos', JSON.stringify(updated));
+    }
+  };
+
+  const deleteSavedRepo = (e: React.MouseEvent, pathToDelete: string) => {
+    e.stopPropagation(); // Avoid triggering analyzeRepo
+    const updated = savedRepos.filter(path => path !== pathToDelete);
+    setSavedRepos(updated);
+    localStorage.setItem('mergeguard_saved_repos', JSON.stringify(updated));
+  };
+
+  const downloadSVG = () => {
+    const svgElement = document.getElementById('bioluminescent-tree-svg');
+    if (!svgElement) return;
+
+    const serializer = new XMLSerializer();
+    let source = serializer.serializeToString(svgElement);
+
+    if (!source.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
+      source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+    }
+    if (!source.match(/^<svg[^>]+xmlns:xlink="http:\/\/www\.w3\.org\/1999\/xlink"/)) {
+      source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+    }
+
+    source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+    const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+
+    const downloadLink = document.createElement("a");
+    const repoPath = repoUrl ? extractRepoPath(repoUrl).replace('/', '_') : 'mergeguard';
+    downloadLink.href = url;
+    downloadLink.download = `${repoPath}_tree.svg`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  };
+
+  const analyzeRepo = async (customPath?: string) => {
+    const targetPath = customPath || repoUrl;
+    if (!targetPath) return;
     setIsAnalyzing(true);
     try {
-      const repoPath = extractRepoPath(repoUrl);
+      const repoPath = extractRepoPath(targetPath);
+      if (customPath) {
+        setRepoUrl(repoPath);
+      }
 
       // Fetch branches and contributors in parallel
       const [branchRes, contribRes] = await Promise.all([
@@ -152,11 +205,21 @@ const MergeGuard: React.FC = () => {
             onKeyDown={(e) => e.key === 'Enter' && analyzeRepo()}
           />
           <button
-            onClick={analyzeRepo}
+            onClick={() => analyzeRepo()}
             disabled={isAnalyzing}
             className="analyze-btn"
+            style={{ marginRight: '8px' }}
           >
             {isAnalyzing ? <Loader2 size={14} className="animate-spin" /> : <ChevronDown size={14} />}
+          </button>
+          
+          <button
+            onClick={saveCurrentRepo}
+            disabled={!repoUrl}
+            className="action-button-mini"
+            title="Save Repository"
+          >
+            <Star size={14} />
           </button>
         </div>
       </header>
@@ -166,14 +229,60 @@ const MergeGuard: React.FC = () => {
         
         {/* Left Column */}
         <div className="footer-col-left">
-          {/* Share Growth */}
+          {/* Saved Repositories */}
           <div className="glass-card">
             <div className="card-title">
-              <span>Share Growth</span>
-              <Share2 size={14} />
+              <span>Saved Repositories</span>
+              <Star size={14} style={{ color: '#fbbf24' }} />
             </div>
-            <button className="action-button">Post to X</button>
-            <button className="action-button"><Download size={14} /> Export SVG</button>
+            
+            <div className="saved-repos-list" style={{ maxHeight: '120px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+              {savedRepos.length > 0 ? (
+                savedRepos.map((repo) => (
+                  <div
+                    key={repo}
+                    onClick={() => analyzeRepo(repo)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      color: '#e2e8f0',
+                      transition: 'all 0.2s'
+                    }}
+                    className="saved-repo-item"
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{repo}</span>
+                    <button
+                      onClick={(e) => deleteSavedRepo(e, repo)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#ef4444',
+                        cursor: 'pointer',
+                        padding: '2px',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <span style={{ fontSize: '11px', color: '#64748b', textAlign: 'center', padding: '12px' }}>No saved repositories.</span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="action-button" style={{ flex: 1, margin: 0, padding: '8px' }} onClick={saveCurrentRepo}>Save Current</button>
+              <button className="action-button" style={{ flex: 1, margin: 0, padding: '8px' }} onClick={downloadSVG}><Download size={12} /> SVG</button>
+            </div>
           </div>
 
           {/* Active Branches */}
