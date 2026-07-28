@@ -13,11 +13,13 @@ import './App.css'
 
 export default function App() {
   const [authScreen, setAuthScreen] = useState<'login' | 'register' | 'forgot' | 'success' | 'loginSuccess' | 'workspace' | 'deeplint' | 'aipoc' | 'branchtree' | 'github_callback' | 'google_callback'>(() => {
-    if (window.location.pathname === '/api/auth/github/callback') {
+    const path = window.location.pathname;
+    if (path.includes('callback')) {
+      // Detect if it is a Google callback by checking path or query search params
+      if (path.includes('google') || window.location.search.includes('scope')) {
+        return 'google_callback'
+      }
       return 'github_callback'
-    }
-    if (window.location.pathname === '/api/auth/google/callback') {
-      return 'google_callback'
     }
     const saved = localStorage.getItem('authSession')
     return saved === 'active' ? 'workspace' : 'login'
