@@ -3,24 +3,57 @@ import { Share2, Download, ChevronDown, Loader2, Sparkles, Network } from 'lucid
 import BioluminescentTree, { type BranchData } from './BioluminescentTree';
 import './MergeGuard.css';
 
+interface Contributor {
+  login: string;
+  avatar_url: string;
+  contributions: number;
+}
+
 const MergeGuard: React.FC = () => {
   const [repoUrl, setRepoUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [treeData, setTreeData] = useState<BranchData[] | null>(null);
   const [repoStats, setRepoStats] = useState({ branches: 8, conflicts: 2, health: 99.4 });
+  const [contributors, setContributors] = useState<Contributor[]>([]);
+  const [activeBranchNames, setActiveBranchNames] = useState<string[]>([]);
+
+  /** Extract "owner/repo" from various URL formats */
+  const extractRepoPath = (input: string): string => {
+    let cleaned = input.trim().replace(/\.git$/, '').replace(/\/$/, '');
+    if (cleaned.includes('github.com/')) {
+      cleaned = cleaned.split('github.com/')[1];
+    }
+    return cleaned;
+  };
 
   const analyzeRepo = async () => {
     if (!repoUrl) return;
     setIsAnalyzing(true);
     try {
-      let repoPath = repoUrl.replace('https://github.com/', '').replace('.git', '');
-      repoPath = repoPath.endsWith('/') ? repoPath.slice(0, -1) : repoPath;
-      
-      const res = await fetch(`https://api.github.com/repos/${repoPath}/branches`);
-      if (!res.ok) throw new Error('Failed to fetch branches');
-      
-      const branches = await res.json();
-      
+      const repoPath = extractRepoPath(repoUrl);
+
+      // Fetch branches and contributors in parallel
+      const [branchRes, contribRes] = await Promise.all([
+        fetch(`https://api.github.com/repos/${repoPath}/branches?per_page=100`),
+        fetch(`https://api.github.com/repos/${repoPath}/contributors?per_page=10`),
+      ]);
+
+      if (!branchRes.ok) throw new Error('Failed to fetch branches');
+
+      const branches = await branchRes.json();
+
+      // Process contributors
+      if (contribRes.ok) {
+        const contribData: Contributor[] = await contribRes.json();
+        setContributors(contribData.slice(0, 5));
+      } else {
+        setContributors([]);
+      }
+
+      // Store branch names for Active Branches card
+      setActiveBranchNames(branches.map((b: any) => b.name));
+
+      // Sort: main/master first
       branches.sort((a: any, b: any) => {
         if (a.name === 'main' || a.name === 'master') return -1;
         if (b.name === 'main' || b.name === 'master') return 1;
@@ -35,7 +68,7 @@ const MergeGuard: React.FC = () => {
       displayBranches.forEach((branch: any, index: number) => {
         const isMain = branch.name === 'main' || branch.name === 'master';
         
-        let color = '#39ff14'; // green
+        let color = '#39ff14';
         let glow = 'glow-green';
         if (branch.name.includes('feat')) { color = '#39ff14'; glow = 'glow-green'; }
         else if (branch.name.includes('release')) { color = '#00d2ff'; glow = 'glow-cyan'; }
@@ -59,10 +92,8 @@ const MergeGuard: React.FC = () => {
         } else {
           const yStart = trunkStartY - 100 - (index * 45); 
           const side = index % 2 === 0 ? 1 : -1;
-          
           const xEnd = trunkX + (side * (220 + Math.random() * 80));
           const yEnd = yStart - 100 - Math.random() * 60;
-          
           const midX = trunkX + (side * 120);
           const midY = yStart - 40;
           
@@ -90,7 +121,7 @@ const MergeGuard: React.FC = () => {
       });
     } catch (e) {
       console.error(e);
-      alert('Error fetching branches. Verifique la URL o los límites de API de GitHub.');
+      alert('Error fetching repo data. Verifique la URL o los límites de API de GitHub.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -110,7 +141,6 @@ const MergeGuard: React.FC = () => {
             <h1>Bandwidth - Bio-Digital Evolution</h1>
             <p>Real-time repository architecture and branch lifecycle visualization.</p>
           </div>
-          {/* Action Pills integrated into a toolbar under the title */}
           <div className="mg-toolbar">
             <button className="pill-btn active"><Network size={14} /> Bioluminescent Neural Map</button>
             <button className="pill-btn"><Sparkles size={14} /> Interact with glowing nodes</button>
@@ -122,7 +152,7 @@ const MergeGuard: React.FC = () => {
             type="text"
             value={repoUrl}
             onChange={(e) => setRepoUrl(e.target.value)}
-            placeholder="infrastructure-core-v2"
+            placeholder="owner/repo or GitHub URL"
             onKeyDown={(e) => e.key === 'Enter' && analyzeRepo()}
           />
           <button
@@ -154,8 +184,27 @@ const MergeGuard: React.FC = () => {
           <div className="glass-card">
             <div className="card-title">Active Branches</div>
             <div className="branches-count">
-              {repoStats.branches} <span className="branches-subtitle">Across 4 teams</span>
+              {repoStats.branches} <span className="branches-subtitle">{activeBranchNames.length > 0 ? `in ${extractRepoPath(repoUrl).split('/')[1] || 'repo'}` : 'Across 4 teams'}</span>
             </div>
+            {activeBranchNames.length > 0 && (
+              <div className="active-branch-list">
+                {activeBranchNames.slice(0, 5).map((name) => (
+                  <span
+                    key={name}
+                    className={`branch-pill ${
+                      name === 'main' || name === 'master' ? 'main' :
+                      name.includes('feat') ? 'feat' :
+                      name.includes('hotfix') || name.includes('bug') || name.includes('conflict') ? 'hotfix' : ''
+                    }`}
+                  >
+                    {name}
+                  </span>
+                ))}
+                {activeBranchNames.length > 5 && (
+                  <span className="branch-pill more">+{activeBranchNames.length - 5}</span>
+                )}
+              </div>
+            )}
             <div className="progress-bar">
               <div className="progress-fill"></div>
             </div>
@@ -171,34 +220,47 @@ const MergeGuard: React.FC = () => {
               <span className="full-breakdown">Full Breakdown ✦</span>
             </div>
             <div className="contributors-list">
-              <div className="contributor">
-                <div className="avatar" style={{ backgroundImage: 'url(https://i.pravatar.cc/150?img=11)' }}></div>
-                <div className="contributor-info">
-                  <span className="contributor-name">Alex Rivera</span>
-                  <span className="contributor-commits">432 commits</span>
-                </div>
-              </div>
-              <div className="contributor">
-                <div className="avatar" style={{ backgroundImage: 'url(https://i.pravatar.cc/150?img=5)' }}></div>
-                <div className="contributor-info">
-                  <span className="contributor-name">Sarah Chen</span>
-                  <span className="contributor-commits">218 commits</span>
-                </div>
-              </div>
-              <div className="contributor">
-                <div className="avatar" style={{ backgroundImage: 'url(https://i.pravatar.cc/150?img=12)' }}></div>
-                <div className="contributor-info">
-                  <span className="contributor-name">Marco Rossi</span>
-                  <span className="contributor-commits">76 commits</span>
-                </div>
-              </div>
+              {contributors.length > 0 ? (
+                contributors.map((c) => (
+                  <div className="contributor" key={c.login}>
+                    <div className="avatar" style={{ backgroundImage: `url(${c.avatar_url})` }}></div>
+                    <div className="contributor-info">
+                      <span className="contributor-name">{c.login}</span>
+                      <span className="contributor-commits">{c.contributions} commits</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <>
+                  <div className="contributor">
+                    <div className="avatar" style={{ backgroundImage: 'url(https://i.pravatar.cc/150?img=11)' }}></div>
+                    <div className="contributor-info">
+                      <span className="contributor-name">Alex Rivera</span>
+                      <span className="contributor-commits">432 commits</span>
+                    </div>
+                  </div>
+                  <div className="contributor">
+                    <div className="avatar" style={{ backgroundImage: 'url(https://i.pravatar.cc/150?img=5)' }}></div>
+                    <div className="contributor-info">
+                      <span className="contributor-name">Sarah Chen</span>
+                      <span className="contributor-commits">218 commits</span>
+                    </div>
+                  </div>
+                  <div className="contributor">
+                    <div className="avatar" style={{ backgroundImage: 'url(https://i.pravatar.cc/150?img=12)' }}></div>
+                    <div className="contributor-info">
+                      <span className="contributor-name">Marco Rossi</span>
+                      <span className="contributor-commits">76 commits</span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
 
         {/* Right Column */}
         <div className="footer-col-right">
-          {/* Live Snapshot (Matches height of left column) */}
           <div className="glass-card snapshot-card-grid">
             <div className="card-title">
               <span>Live Snapshot</span>

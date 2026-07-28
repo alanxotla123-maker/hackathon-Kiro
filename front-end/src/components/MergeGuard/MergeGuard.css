@@ -338,3 +338,48 @@
   font-size: 11px;
   color: #64748b;
 }
+
+/* Active Branch Pills */
+.active-branch-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+
+.branch-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(167, 139, 250, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  letter-spacing: 0.3px;
+}
+
+.branch-pill.main {
+  background: rgba(57, 255, 20, 0.12);
+  color: #39ff14;
+  border-color: rgba(57, 255, 20, 0.3);
+}
+
+.branch-pill.feat {
+  background: rgba(0, 210, 255, 0.12);
+  color: #00d2ff;
+  border-color: rgba(0, 210, 255, 0.25);
+}
+
+.branch-pill.hotfix {
+  background: rgba(255, 51, 102, 0.12);
+  color: #ff3366;
+  border-color: rgba(255, 51, 102, 0.25);
+}
+
+.branch-pill.more {
+  background: rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+  border-color: rgba(100, 116, 139, 0.3);
+}
+
